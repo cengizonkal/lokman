@@ -555,7 +555,6 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 ---
 
 ## 7. Onay bekleyen tasarım kararları
-- [ ] Alerjiler ve kronik hastalıklar ayrı tablolarda (yapısal) tutulsun mu? Taslakta yapısal; düz metin daha basit ama FHIR'e zayıf aktarılır
 - [ ] Teşhiste "ön tanı / kesin tanı" ayrımı olsun mu?
 - [ ] Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulsun mu?
 - [ ] Muayenede "hikaye/anamnez" ve hastaya giden "öneriler/plan" alanları ayrı olsun mu?
