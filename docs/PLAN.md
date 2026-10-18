@@ -48,7 +48,8 @@ flowchart LR
 | Terminoloji | Teşhis için ICD-10, ilaç için ATC, ölçümler için LOINC, birimler için UCUM. İleride SNOMED CT |
 | Kod dili | Kod tanımlayıcıları İngilizce (Laravel ve Flutter gelenekleri), arayüz Türkçe |
 | Roller | Yönetici, doktor, sekreter. Sekreter muayene notlarını, teşhisleri ve reçeteleri göremez |
-| Randevu | İlk sürümde var. Her doktor kendi randevularını girer ve yönetir |
+| Randevu | İlk sürümde var. Doktor kendi randevularını, sekreter tüm doktorların randevularını girer ve yönetir |
+| Planlanan aşılar | Ayrı tablo (`planned_immunizations`): ertelenen aşılar, sonraki dozlar, takvim önerileri. Klinikte ve mobilde hatırlatma bu tablodan yapılır |
 | QR bağlantı süresi | Klinik ayarlar: süre ve kullanım sayısı yönetici ayarlarındadır. Varsayılan 15 dk, tek kullanım |
 
 ---
@@ -65,7 +66,7 @@ flowchart LR
 | Aşı kaydı | Klinikte yapılan aşı (lot no, uygulayan), sonraki doz tarihi, ulusal aşı takvimi şablonu. Hastanın getirdiği aşıları **onaylama kuyruğu** |
 | Sağlık ölçümleri | Tansiyon, şeker, kilo, boy, nabız, ateş, SpO₂. Normal aralık uyarısı |
 | Paylaşım | Hasta için QR (süreli bağlantı) ya da FHIR dosyası üretme, hastadan gelen dosyayı içe aktarma |
-| Randevu | Doktor kendi takvimini yönetir: randevu ekler, taşır, iptal eder, "geldi/gelmedi" işaretler. Randevudan tek tıkla muayene açılır. Hastanın gelecek randevuları paylaşım paketine eklenir |
+| Randevu | Doktor kendi takvimini, sekreter tüm doktorların takvimini yönetir: randevu ekler, taşır, iptal eder, "geldi/gelmedi" işaretler. Randevudan tek tıkla muayene açılır. Hastanın gelecek randevuları paylaşım paketine eklenir |
 | Kataloglar | İlaç (TİTCK listesinden içe aktarım ve güncelleme: ad, barkod, etken madde, ATC), ICD-10, aşı. Excel/CSV ile toplu yükleme |
 | Yönetim | Kullanıcılar, roller, klinik ayarları, erişim logu |
 
@@ -73,8 +74,8 @@ flowchart LR
 | Rol | Yetki |
 |---|---|
 | Yönetici | Her şey: kullanıcı yönetimi, ayarlar, erişim logu, hasta silme |
-| Doktor | Muayene, teşhis, reçete, aşı, onaylar, paylaşım. **Yalnızca kendi randevuları** |
-| Sekreter | Hasta kaydı, aşı ve ölçüm girişi, paylaşım. Muayene notlarını, teşhisleri ve reçeteleri **göremez, giremez**. Randevular doktora aittir (sekreterin randevu yetkisi gerekirse sonra eklenir) |
+| Doktor | Muayene, teşhis, reçete, aşı, onaylar, paylaşım. Kendi randevuları |
+| Sekreter | Hasta kaydı, aşı ve ölçüm girişi, paylaşım. Muayene notlarını, teşhisleri ve reçeteleri **göremez, giremez**. Tüm doktorlar için randevu girer ve yönetir |
 
 ### 2.3 Veri modeli (taslak)
 > Ayrıntılı ve güncel tasarım: [VERITABANI.md](VERITABANI.md). Aşağıdaki liste özet niteliğindedir.
@@ -94,7 +95,9 @@ prescription_items (id, prescription_id, medication_id NULL, medication_name, at
                     instructions, stopped_at NULL)
 immunizations      (id, patient_id, encounter_id NULL, vaccine_id NULL, vaccine_name, vaccine_code,
                     dose_number, administered_on, lot_number, performer_id NULL,
-                    next_dose_on NULL, source /*clinic|patient_reported*/, verified, verified_by, verified_at)
+                    source /*clinic|patient_reported*/, verified, verified_by, verified_at)
+planned_immunizations (id, patient_id, vaccine_id NULL, vaccine_name, dose_number, due_on,
+                    status /*planned|completed|cancelled*/, origin, immunization_id NULL, reason)
 observations       (id, patient_id, encounter_id NULL, type, value, value2 NULL, unit,
                     measured_at, source /*clinic|patient_reported*/, verified)
 appointments       (id, doctor_id, patient_id, starts_at, ends_at, status /*planned|arrived|no_show|cancelled*/,
@@ -224,7 +227,7 @@ lokman/
 | **F3: Klinik aktarım** | FHIR dışa aktarım, QR süreli bağlantı, dosya indirme, FHIR içe aktarım ve onay akışı | Panelden QR/dosya üretimi |
 | **F4: Mobil MVP** | Aile profilleri, QR/dosya ile içe aktarma, muayene geçmişi, ilaçlar ve doz hatırlatma, aşı takvimi ve hatırlatma, randevu hatırlatma, ölçüm girişi ve grafik, dışa aktarma | **İlk Android APK** |
 | **F5: Yayın** | Drive yedeği, KVKK ekranları, APK imzalama, kurulum dokümanı, demo verisi | v0.1 sürümü |
-| Sonra | e-Nabız / e-Reçete dönüştürücü katmanı, iOS, şifreli paket, sekreter randevu yetkisi | |
+| Sonra | e-Nabız / e-Reçete dönüştürücü katmanı, iOS, şifreli paket | |
 
 ---
 

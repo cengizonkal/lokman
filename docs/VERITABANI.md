@@ -41,6 +41,7 @@ erDiagram
     patients ||--o{ encounters : "muayeneler"
     patients ||--o{ prescriptions : "reçeteler"
     patients ||--o{ immunizations : "aşılar"
+    patients ||--o{ planned_immunizations : "planlanan aşılar"
     patients ||--o{ observations : "ölçümler"
     patients ||--o{ share_links : "paylaşımlar"
 
@@ -55,6 +56,8 @@ erDiagram
     icd10_codes ||--o{ diagnoses : "hastalık"
     icd10_codes ||--o{ patient_conditions : ""
     vaccines ||--o{ immunizations : "katalog"
+    vaccines ||--o{ planned_immunizations : "katalog"
+    planned_immunizations |o--o| immunizations : "yapılınca bağlanır"
     vaccines ||--o{ vaccine_schedule_rules : "aşı takvimi"
     observation_types ||--o{ observations : "tür"
     imports ||--o{ immunizations : "dosyadan geldi"
@@ -214,12 +217,14 @@ Kural: geçerli bir `data_sharing` rızası yoksa QR ya da dosya paylaşımı ya
 
 ## 4. Klinik süreç
 
-### `appointments`: randevu (doktor kendi randevularını yönetir)
+### `appointments`: randevu
+Doktor kendi randevularını, sekreter tüm doktorların randevularını girer ve yönetir.
 | Kolon | Tip | Kısıt / Not |
 |---|---|---|
 | id | uuid | PK |
 | doctor_id | uuid | → users (rol = doctor) |
 | patient_id | uuid | → patients |
+| created_by | uuid | → users. Randevuyu giren (doktor ya da sekreter) |
 | starts_at | timestamptz | not null |
 | ends_at | timestamptz | not null, CHECK `ends_at > starts_at` |
 | status | varchar(15) | CHECK in (`planned`, `arrived`, `completed`, `no_show`, `cancelled`) |
@@ -326,7 +331,6 @@ Muayeneden ayrı bir tablodur, muayene bağlantısı opsiyoneldir (ilk dokümand
 | site | varchar(30) | Uygulama bölgesi, ör. sol deltoid |
 | performer_id | uuid null | → users (klinikte yapıldıysa) |
 | performer_name | varchar(150) | Dışarıda yapıldıysa yapan kurum veya kişi |
-| next_dose_on | date | Sonraki doz tarihi. Mobilde hatırlatma olur |
 | source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`). Klinikte yapılan aşı `verified` olarak doğar |
 | verified_by | uuid null | → users |
@@ -338,7 +342,37 @@ Muayeneden ayrı bir tablodur, muayene bağlantısı opsiyoneldir (ilk dokümand
 
 Kural: `source = patient_reported` ise `verification` `pending` olarak başlar; doktor onaylar ya da reddeder.
 İndeks: `(patient_id, administered_on desc)`, kısmi indeks `(verification) WHERE verification = 'pending'` (onay kuyruğu)
-FHIR: `Immunization`. `next_dose_on` ve aşı takvimindeki gelecek dozlar `ImmunizationRecommendation` olarak taşınır.
+FHIR: `Immunization`.
+> Panelde aşı girilirken "sonraki doz tarihi" alanı doldurulursa ayrı bir kolona yazılmaz; otomatik olarak bir `planned_immunizations` kaydı oluşturulur. Böylece gelecek aşıların tek bir kaynağı olur.
+
+### `planned_immunizations`: planlanan aşılar
+Yapılacak aşılar burada tutulur. Örnekler: ateş nedeniyle kontrole ertelenen Td, bir aşının sonraki dozu, ulusal takvimden önerilen doz, sezonluk grip aşısı.
+
+| Kolon | Tip | Kısıt / Not |
+|---|---|---|
+| id | uuid | PK |
+| patient_id | uuid | → patients |
+| vaccine_id | uuid null | → vaccines |
+| vaccine_name | varchar(200) | not null (kopya) |
+| vaccine_code | varchar(30) | (kopya) |
+| dose_number | smallint | |
+| due_on | date | not null. Yapılması gereken tarih |
+| status | varchar(10) | CHECK in (`planned`, `completed`, `cancelled`), default `planned` |
+| origin | varchar(20) | CHECK in (`manual` doktor/sekreter elle, `next_dose` önceki aşının sonraki dozu, `schedule` ulusal takvimden) |
+| encounter_id | uuid null | → encounters (planın yapıldığı muayene) |
+| previous_immunization_id | uuid null | → immunizations (`origin = next_dose` ise önceki doz) |
+| immunization_id | uuid null | → immunizations, unique. Aşı yapılınca bağlanır, durum `completed` olur |
+| reason | varchar(300) | ör. "Ateşli olduğu için kontrole ertelendi" (**hastaya gider**) |
+| cancelled_reason | varchar(300) | |
+| created_by, timestamps, deleted_at | | |
+
+Kurallar:
+- Aşı kaydedilirken hastanın aynı aşıya ait `planned` kaydı varsa panel "Planlanan aşı yapıldı olarak işaretlensin mi?" diye sorar. Onaylanırsa `immunization_id` bağlanır.
+- Ulusal takvim (`vaccine_schedule_rules`) çocuk hastalarda **öneri** olarak hesaplanır, kendiliğinden kayıt oluşturmaz. Doktor öneriyi tek tıkla planlanan aşıya çevirir.
+- `due_on` geçmiş ve durumu `planned` olan kayıt panelde "gecikmiş aşı" olarak listelenir.
+
+İndeksler: `(patient_id, due_on) WHERE status = 'planned'`, `(due_on) WHERE status = 'planned'` (panelde "bu hafta yapılacak aşılar" listesi)
+FHIR: `ImmunizationRecommendation` (`dateCriterion` = `due_on`). Mobilde aşı hatırlatması bu kayıtlardan kurulur.
 
 ### `observations`: sağlık takibi ve vital bulgular
 | Kolon | Tip | Kısıt / Not |
@@ -484,7 +518,7 @@ Sunucu yok; veri telefonda durur. Kaynak kimlikleri klinikten gelen UUID'lerdir.
 | `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre |
 | `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
-| `immunization_due` | Gelecek aşı dozları (klinikten gelen öneri + profilin yaşına göre ulusal takvim) |
+| `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları + profilin yaşına göre ulusal takvim önerileri |
 | `observations` | Ölçümler (klinikten gelen + hastanın girdiği) |
 | `appointments` | Klinikten gelen gelecek randevular |
 | `allergies`, `conditions` | Alerji ve kronik hastalıklar |
