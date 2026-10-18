@@ -1,61 +1,88 @@
 # Lokman — Proje Planı
 
-> Durum: **taslak, soru-cevapla netleşiyor.** Kararlar bölümü kesinleşen maddeleri, "Açık konular" bölümü henüz cevaplanmamış soruları içerir.
+> Durum: **plan onaylandı (v1). Kodlamaya henüz başlanmadı.**
+> Veritabanı tasarımı: [VERITABANI.md](VERITABANI.md)
 
-Lokman, özel klinikler için açık kaynak hasta takip sistemidir ve **birbirinden bağımsız iki üründen** oluşur:
+Lokman, özel klinikler için açık kaynak (MIT) hasta takip sistemidir ve **birbirinden bağımsız iki üründen** oluşur:
 
 1. **Klinik sistemi (web)**: Kliniğin kendi sunucusunda çalışır (self-hosted, tek klinik). Doktor ve personel veriyi burada üretir.
-2. **Mobil uygulama (Flutter, Android)**: Hastanın kişisel sağlık defteridir. Veri telefonda durur. Hasta hesabı ve sunucu yoktur.
+2. **Mobil uygulama (Flutter, Android)**: Hastanın kişisel sağlık defteridir. Veri telefonda durur; hasta hesabı ve sunucu yoktur.
 
-İki ürün arasındaki **tek bağ HL7 FHIR R4 formatında dışa ve içe aktarımdır**. Aktarım QR kod ya da dosya ile yapılır.
+İki ürün arasındaki **tek bağ, HL7 FHIR R4 (IPS uyumlu) formatında dışa ve içe aktarımdır**. Aktarım QR kod ya da dosya ile yapılır. Veri hastanındır: hasta verisini başka bir Lokman kliniğine, herhangi bir hastaneye ya da yurt dışındaki bir kuruma götürebilir.
 
 ```mermaid
 flowchart LR
   subgraph Klinik["Klinik sistemi (self-hosted)"]
-    P[Filament paneli<br/>doktor / sekreter / yönetici] --> L[Laravel]
+    P[Filament paneli<br/>yönetici / doktor / sekreter] --> L[Laravel]
     L --> DB[(PostgreSQL)]
   end
   subgraph Telefon["Mobil uygulama (Android)"]
     A[Flutter] --> S[(Yerel SQLite)]
   end
-  L -- "QR: süreli bağlantı (alan adı ya da yerel ağ)<br/>veya FHIR JSON dosyası" --> A
-  A -- "FHIR JSON dosyası<br/>(hasta beyanı: aşı, ölçüm)" --> L
+  L -- "QR: süreli bağlantı (alan adı ya da yerel ağ)<br/>veya FHIR dosyası" --> A
+  A -- "FHIR dosyası + PDF özet" --> L
+  A -- "FHIR dosyası + PDF özet" --> H[Başka klinik / hastane<br/>yurt dışı kurum]
   A -. "isteğe bağlı yedek" .-> G[(Hastanın Google Drive'ı)]
 ```
 
 ---
 
-## 1. Alınan kararlar
+## 1. Kararlar
 
+### 1.1 Mimari ve teknoloji
 | Konu | Karar |
 |---|---|
-| Backend | Laravel (PHP), REST |
+| Backend | Laravel (PHP) |
 | Veritabanı | PostgreSQL |
 | Klinik paneli | Laravel + Filament, backend ile aynı proje |
 | Kurulum | Tek klinik, self-hosted, Docker Compose |
-| Kullanıcılar | Çok kullanıcılı: personel aynı sisteme **e-posta + şifre** ile girer, rol bazlı yetki uygulanır |
 | Mobil | Flutter, ilk hedef **Android APK** |
-| Mobil ↔ klinik | Doğrudan bağlantı yok, hasta hesabı yok. Yalnızca FHIR dışa ve içe aktarımı |
-| Aktarım yolu (klinik → telefon) | Alan adı varsa **QR** (süreli HTTPS bağlantısı). Alan adı yoksa **yerel ağ QR'ı** (telefon kliniğin Wi-Fi'ında) ya da **dosya** |
-| Aktarım yolu (telefon → klinik) | Yalnızca **dosya** (FHIR JSON). Gelen kayıtlar onay kuyruğuna düşer |
-| İlaç katalogu | **TİTCK ilaç listesi** (Excel) panelden içe aktarılır ve güncellenir |
-| Lisans | **MIT** |
-| Veri formatı | **HL7 FHIR R4**, düz JSON (şifrelenmemiş). Dışa aktarım **HL7 International Patient Summary (IPS)** profiline uyar |
-| Okunabilir özet | Her dışa aktarımla birlikte yazdırılabilir **PDF özet** üretilir (FHIR okuyamayan kurumlar için). Hem panel hem mobil üretir |
-| Dil | Serbest metin (şikayet, bulgu, not) Türkçe kalır. Kodlu alanlarda (teşhis, aşı, ilaç etken maddesi, ölçüm türü) **Türkçe + İngilizce** ad birlikte yazılır |
-| Dış kaynaklı kayıtlar | Başka kurumdan gelen muayene, teşhis, reçete, aşı ve ölçüm klinikte **aynı tablolara** `source = external` ile kurum adı etiketiyle ve salt okunur olarak eklenir |
-| Kimlik | **TCKN temelli değil.** Birincil anahtar UUID. TCKN, pasaport gibi kimlikler opsiyonel ek bilgidir |
-| Mobil profiller | **Aile profilleri**: tek uygulamada birden fazla kişi (ör. anne ve çocukları) |
-| Mobil yedek | **İsteğe bağlı Google Drive yedeği** |
-| Birden çok klinik | Mobil uygulama farklı kliniklerden gelen dosyaları aynı profilde birleştirir. Klinik sistemi tek kliniktir |
-| Veri taşınabilirliği | Veri hastanındır. Mobil uygulama bir profilin **tüm verisini** (hangi klinikten gelmiş olursa olsun) FHIR dosyası olarak dışa aktarır. Lokman kullanan başka bir klinik, FHIR destekleyen herhangi bir hastane ya da yurt dışındaki bir kurum bu dosyayı alabilir |
-| İlaç uyumu | "Aldım / atladım" kayıtları **yalnızca mobilde** kalır, hiçbir dışa aktarıma girmez |
-| Terminoloji | Teşhis için ICD-10, ilaç için ATC, ölçümler için LOINC, birimler için UCUM. İleride SNOMED CT |
-| Kod dili | Kod tanımlayıcıları İngilizce (Laravel ve Flutter gelenekleri), arayüz Türkçe |
+| Lisans | MIT |
+| Kod dili | Kod tanımlayıcıları İngilizce (Laravel/Flutter gelenekleri), arayüz Türkçe |
+
+### 1.2 Kullanıcılar ve roller
+| Konu | Karar |
+|---|---|
+| Giriş | Çok kullanıcılı: personel aynı sisteme **e-posta + şifre** ile girer |
 | Roller | Yönetici, doktor, sekreter. Sekreter muayene notlarını, teşhisleri ve reçeteleri göremez |
-| Randevu | İlk sürümde var. Doktor kendi randevularını, sekreter tüm doktorların randevularını girer ve yönetir |
-| Planlanan aşılar | Ayrı tablo (`planned_immunizations`): ertelenen aşılar, sonraki dozlar, takvim önerileri. Klinikte ve mobilde hatırlatma bu tablodan yapılır |
-| QR bağlantı süresi | Klinik ayarlar: süre ve kullanım sayısı yönetici ayarlarındadır. Varsayılan 15 dk, tek kullanım |
+| Randevu | Doktor kendi randevularını, sekreter tüm doktorların randevularını girer ve yönetir. Aynı doktora çakışan randevu verilemez |
+| Hasta hesabı | Yok. Mobil uygulama sunucuya bağlanmaz |
+
+### 1.3 Hasta ve klinik veri
+| Konu | Karar |
+|---|---|
+| Kimlik | **TCKN temelli değil.** Birincil anahtar UUID. TCKN, pasaport gibi kimlikler opsiyoneldir |
+| TCKN saklama | Veritabanında düz saklanır (arama ve doğrulama için). Koruma: veritabanı/disk düzeyinde şifreleme, rol bazlı erişim, erişim logu |
+| Protokol numarası | Yıl + sıra: `2026-000123` |
+| Alerji / kronik hastalık | Ayrı, yapısal tablolar. Hasta beyanı da kabul edilir (onay akışıyla) |
+| Muayene | Şikayet, hikaye, bulgular, **öneriler (hastaya gider)** ve **iç not (hastaya gitmez)** ayrı alanlar |
+| Teşhis | ICD-10, birincil/ikincil, **ön tanı / kesin tanı** |
+| Reçete | Reçete türü (normal / kırmızı / yeşil / mor / turuncu), kutu adedi, doz, **kullanım saatleri**, süre ya da sürekli kullanım |
+| İlaç katalogu | **TİTCK ilaç listesi** (Excel) panelden içe aktarılır ve güncellenir |
+| Aşı | Yapılan aşılar (`immunizations`) ve **planlanan aşılar** (`planned_immunizations`) ayrı tablolar. Ulusal aşı takvimi öneri olarak hesaplanır |
+| Hasta beyanı | Hastanın getirdiği aşı, alerji, kronik hastalık ve ölçümler **onay kuyruğuna** düşer |
+| Dış kaynaklı kayıtlar | Başka kurumdan gelen muayene, teşhis, reçete, aşı ve ölçümler aynı tablolara `source = external` ile, kurum adıyla ve salt okunur eklenir |
+| Silme | Tıbbi kayıtlar yumuşak silinir; her işlem erişim loguna yazılır |
+
+### 1.4 Aktarım (mobil ↔ klinik ↔ diğer kurumlar)
+| Konu | Karar |
+|---|---|
+| Format | **HL7 FHIR R4**, **IPS** (International Patient Summary) profiline uyumlu, düz JSON |
+| Klinik → telefon | Alan adı varsa **QR** (süreli HTTPS bağlantısı). Alan adı yoksa **yerel ağ QR'ı** (sertifika parmak izi doğrulamalı) ya da **dosya** |
+| QR süresi | Klinik ayarlar. Varsayılan 15 dk, tek kullanım |
+| Telefon → klinik / kurum | **Dosya**. Profilin tüm verisi ya da seçilen kayıtlar |
+| Okunabilir özet | Her dışa aktarımla **iki dilli PDF özet** (panel ve mobil üretir) |
+| Dil | Serbest metin Türkçe. Kodlu alanlarda (teşhis, aşı, etken madde, ölçüm türü) Türkçe + İngilizce ad |
+| İlaç uyumu | "Aldım / atladım" kayıtları yalnızca mobilde kalır, dışa aktarılmaz |
+| Terminoloji | ICD-10 (teşhis), ATC (ilaç), LOINC (ölçüm), UCUM (birim). İleride SNOMED CT |
+
+### 1.5 Mobil
+| Konu | Karar |
+|---|---|
+| Profiller | Aile profilleri. Ebeveyn çocuğu için klinik dosyası olmadan profil açıp alerji, aşı, ölçüm girebilir |
+| Birden çok klinik | Farklı kliniklerden gelen veriler aynı profilde birleşir |
+| Bildirimler | Cihazda zamanlanır: ilaç doz saatleri, planlanan aşılar, randevular |
+| Yedek | İsteğe bağlı Google Drive yedeği |
 
 ---
 
@@ -64,63 +91,45 @@ flowchart LR
 ### 2.1 Modüller
 | Modül | İçerik |
 |---|---|
-| Hasta kaydı | Ad, soyad, doğum tarihi, cinsiyet, iletişim, alerjiler, kronik hastalıklar, acil durum kişisi. Opsiyonel kimlikler (TCKN, pasaport…). Klinik içi protokol numarası |
-| Muayene | Şikayet, bulgular, iç not (hastaya gitmez), vital ölçümler |
-| Teşhis / hastalık | ICD-10 katalogundan arama, birincil ve ikincil teşhis |
-| Reçete | İlaç katalogundan seçim (ATC), doz ve birim, **kullanım saatleri** (08:00, 20:00…), başlangıç tarihi, süre ya da sürekli kullanım, aç/tok notu |
-| Aşı kaydı | Klinikte yapılan aşı (lot no, uygulayan), sonraki doz tarihi, ulusal aşı takvimi şablonu. Hastanın getirdiği aşıları **onaylama kuyruğu** |
-| Sağlık ölçümleri | Tansiyon, şeker, kilo, boy, nabız, ateş, SpO₂. Normal aralık uyarısı |
-| Paylaşım | Hasta için QR (süreli bağlantı) ya da FHIR dosyası üretme, hastadan gelen dosyayı içe aktarma |
-| Randevu | Doktor kendi takvimini, sekreter tüm doktorların takvimini yönetir: randevu ekler, taşır, iptal eder, "geldi/gelmedi" işaretler. Randevudan tek tıkla muayene açılır. Hastanın gelecek randevuları paylaşım paketine eklenir |
-| Kataloglar | İlaç (TİTCK listesinden içe aktarım ve güncelleme: ad, barkod, etken madde, ATC), ICD-10, aşı. Excel/CSV ile toplu yükleme |
-| Yönetim | Kullanıcılar, roller, klinik ayarları, erişim logu |
+| Hasta kaydı | Kimlik bilgileri, iletişim, acil durum kişisi, opsiyonel kimlikler, protokol no, alerjiler, kronik hastalıklar, KVKK rızaları |
+| Randevu | Doktor bazında günlük/haftalık takvim. Ekle, taşı, iptal et, "geldi / gelmedi". Randevudan tek tıkla muayene |
+| Muayene | Şikayet, hikaye, bulgular, öneriler, iç not, vital bulgular. Hastanın geçmişi (dış kaynaklı kayıtlar dahil) tek zaman çizelgesinde |
+| Teşhis | ICD-10 arama, birincil/ikincil, ön/kesin tanı |
+| Reçete | TİTCK katalogundan ilaç, doz, kullanım saatleri, süre, kutu, reçete türü. **İlaç–alerji uyarısı** (etken madde / ATC eşleşmesi) |
+| Aşı | Aşı kaydı (lot, son kullanma, uygulayan), planlanan aşılar, ulusal takvim önerileri, "gecikmiş" ve "bu hafta" listeleri |
+| Ölçümler | Ölçüm girişi, normal aralık uyarısı, trend grafikleri (hastanın girdikleri dahil) |
+| Onay kuyruğu | Hasta beyanı aşı, alerji, kronik hastalık ve ölçümleri onayla/reddet |
+| Paylaşım | QR (internet / yerel ağ), FHIR dosyası ve PDF özet indirme, aktif bağlantıları iptal |
+| İçe aktarım | FHIR dosyası yükleme, hasta eşleştirme (otomatik ya da elle / yeni hasta), içe aktarım geçmişi |
+| Kataloglar | İlaç (TİTCK), ICD-10, aşı ve aşı takvimi, ölçüm türleri |
+| Yönetim | Kullanıcılar, roller, klinik ayarları (QR süresi, alan adı, yerel ağ), erişim logu |
 
-### 2.2 Roller
-| Rol | Yetki |
-|---|---|
-| Yönetici | Her şey: kullanıcı yönetimi, ayarlar, erişim logu, hasta silme |
-| Doktor | Muayene, teşhis, reçete, aşı, onaylar, paylaşım. Kendi randevuları |
-| Sekreter | Hasta kaydı, aşı ve ölçüm girişi, paylaşım. Muayene notlarını, teşhisleri ve reçeteleri **göremez, giremez**. Tüm doktorlar için randevu girer ve yönetir |
+### 2.2 Rol–yetki matrisi
+| İşlem | Yönetici | Doktor | Sekreter |
+|---|:-:|:-:|:-:|
+| Hasta kaydı oluştur / düzenle | ✓ | ✓ | ✓ |
+| Hasta sil (yumuşak) | ✓ | | |
+| Randevu (kendi) | ✓ | ✓ | |
+| Randevu (tüm doktorlar) | ✓ | | ✓ |
+| Muayene, teşhis, reçete: görüntüle | ✓ | ✓ | |
+| Muayene, teşhis, reçete: yaz | | ✓ | |
+| Aşı ve ölçüm girişi | ✓ | ✓ | ✓ |
+| Planlanan aşı | ✓ | ✓ | ✓ |
+| Onay kuyruğu | | ✓ | |
+| QR / dosya paylaşımı | ✓ | ✓ | ✓ |
+| FHIR içe aktarım | ✓ | ✓ | ✓ (eşleştirme dahil) |
+| Kataloglar | ✓ | ✓ (ilaç/ICD görüntüleme) | |
+| Kullanıcılar, ayarlar, erişim logu | ✓ | | |
 
-### 2.3 Veri modeli (taslak)
-> Ayrıntılı ve güncel tasarım: [VERITABANI.md](VERITABANI.md). Aşağıdaki liste özet niteliğindedir.
+> Yöneticinin muayene yazma yetkisi yok; yönetici aynı zamanda hekimse ikinci bir doktor hesabı kullanır (ya da ileride çoklu rol desteklenir).
 
-Tüm tablolarda birincil anahtar **UUID**'dir. Böylece FHIR `id` alanı kararlı kalır ve tekrarlanan aktarımlar mükerrer kayıt üretmez.
-
-```
-users              (id, name, email, password, role, active)
-patients           (id, protocol_no, first_name, last_name, birth_date, gender, phone, email,
-                    address, allergies, chronic_conditions, emergency_contact_*, notes, timestamps)
-patient_identifiers(id, patient_id, type /*tckn|passport|other*/, value)        -- opsiyonel
-encounters         (id, patient_id, doctor_id, started_at, complaint, findings, internal_note)
-conditions         (id, encounter_id, icd10_code, description, rank /*primary|secondary*/)
-prescriptions      (id, encounter_id NULL, patient_id, doctor_id, issued_at, note)
-prescription_items (id, prescription_id, medication_id NULL, medication_name, atc_code,
-                    dose, dose_unit, times_of_day JSON, start_date, duration_days NULL,
-                    instructions, stopped_at NULL)
-immunizations      (id, patient_id, encounter_id NULL, vaccine_id NULL, vaccine_name, vaccine_code,
-                    dose_number, administered_on, lot_number, performer_id NULL,
-                    source /*clinic|patient_reported*/, verified, verified_by, verified_at)
-planned_immunizations (id, patient_id, vaccine_id NULL, vaccine_name, dose_number, due_on,
-                    status /*planned|completed|cancelled*/, origin, immunization_id NULL, reason)
-observations       (id, patient_id, encounter_id NULL, type, value, value2 NULL, unit,
-                    measured_at, source /*clinic|patient_reported*/, verified)
-appointments       (id, doctor_id, patient_id, starts_at, ends_at, status /*planned|arrived|no_show|cancelled*/,
-                    note, encounter_id NULL)
-share_links        (id, patient_id, token_hash, scope JSON, expires_at, max_uses, use_count, created_by)
-settings           (key, value)   -- ör. share_link_ttl_minutes, share_link_max_uses, installation_id
-imports            (id, file_name, imported_by, summary JSON, created_at)
-consents           (id, patient_id, type, version, given_at, recorded_by)          -- KVKK açık rıza
-access_logs        (id, user_id, action, subject_type, subject_id, patient_id, ip, at)
-medications, icd10_codes, vaccines, vaccine_schedule_templates                    -- kataloglar
-```
-
-### 2.4 Teknoloji
-- PHP 8.x, Laravel, Filament (güncel kararlı sürümler, kurulumda sabitlenecek)
-- `spatie/laravel-permission` (roller)
-- Pest (testler)
-- FHIR dönüştürücü: kendi mapper sınıflarımız. Üretilen paketler CI'da resmi HL7 FHIR Validator ile doğrulanacak
-- Docker Compose: `caddy` (alan adı varsa otomatik HTTPS), `php-fpm`, `postgres`, `queue`, `scheduler`
+### 2.3 Teknoloji
+- PHP 8.x, Laravel, Filament (güncel kararlı sürümler, kurulumda sabitlenir)
+- `spatie/laravel-permission` (roller), Laravel Policy (kayıt düzeyi yetki)
+- Pest (testler), Larastan (statik analiz), Pint (kod biçimi)
+- FHIR: kendi mapper sınıflarımız (`app/Fhir`). Üretilen paketler CI'da HL7 FHIR Validator (IPS profili) ile doğrulanır
+- PDF: Laravel tarafında HTML → PDF
+- Docker Compose: `caddy` (alan adı varsa otomatik HTTPS, yerel ağda kendinden imzalı sertifika), `php-fpm`, `postgres`, `queue`, `scheduler`
 
 ---
 
@@ -129,130 +138,185 @@ medications, icd10_codes, vaccines, vaccine_schedule_templates                  
 ### 3.1 Ekranlar
 | Ekran | İçerik |
 |---|---|
-| Profiller | Aile üyeleri. Ebeveyn çocuğu için klinik dosyası olmadan da profil açabilir; alerji, kronik hastalık, aşı ve ölçümleri kendisi girer. Her profilin hangi kliniklere bağlı olduğu görünür |
-| Bugün | Günün ilaç dozları (aldım / atladım), yaklaşan aşılar, son ölçümler |
-| Muayeneler | Klinik, tarih, doktor, şikayet, bulgular, teşhisler, reçeteler |
+| Profiller | Aile üyeleri, profil ekleme (klinik dosyası olmadan da), profilin bağlı olduğu klinikler |
+| Bugün | Günün ilaç dozları (aldım / atladım), yaklaşan aşı ve randevular, son ölçümler |
+| Muayeneler | Klinik/kurum, tarih, doktor, şikayet, bulgular, öneriler, teşhisler, reçeteler |
 | İlaçlarım | Aktif ilaçlar, kullanım saatleri, bitiş tarihi, uyum oranı |
-| Aşılar | Yapılan aşılar, aşı takvimi (gecikmiş / yaklaşan), hastanın kendi girdiği aşılar ("doğrulanmadı" etiketiyle) |
+| Aşılar | Yapılan aşılar, planlanan aşılar, ulusal takvim önerileri, kendi girdikleri ("doğrulanmadı") |
+| Alerjiler ve hastalıklar | Klinikten gelen ve kendi girdiği alerji / kronik hastalıklar |
 | Sağlık takibi | Ölçüm girişi ve grafikler |
-| İçe aktar | QR okut ya da dosya aç |
-| Dışa aktar | Seçili profilin tüm verisi ya da seçilen kayıtlar (ör. yalnızca aşılar ve alerjiler) FHIR JSON dosyası olarak, Android paylaş menüsü ile |
-| Ayarlar | Bildirim tercihleri, isteğe bağlı Google Drive yedeği ve geri yükleme |
+| İçe aktar | QR okut ya da dosya aç; profil eşleştirme |
+| Dışa aktar | Tüm veri ya da seçili kayıtlar → FHIR dosyası + PDF özet, Android paylaş menüsü |
+| Ayarlar | Bildirim tercihleri, Google Drive yedeği / geri yükleme |
 
 ### 3.2 Teknik
-- Yerel veritabanı: SQLite (`drift`). Her kaynağın ham FHIR JSON'u da saklanır, böylece dışa aktarım kayıpsız olur
-- Bildirimler: `flutter_local_notifications` + `timezone`
-  - Doz saatleri ve aşı tarihleri cihazda zamanlanır
-  - Telefon yeniden başlayınca bildirimler yeniden kurulur
-  - Android 13+ bildirim izni ve Android 12+ tam zamanlı alarm izni istenir
-- QR: `mobile_scanner`. Dosya: Android paylaş menüsünden ya da dosya seçiciyle açma
-- Yedek: Google Drive `appDataFolder` (uygulamaya özel gizli klasör), elle ya da periyodik
-- Durum yönetimi `riverpod`, yönlendirme `go_router`, grafikler `fl_chart`
+- Yerel veritabanı: SQLite (`drift`); her kaynağın ham FHIR JSON'u da saklanır
+- Bildirimler: `flutter_local_notifications` + `timezone`; yeniden başlatmada yeniden kurulum; Android 13+ bildirim ve 12+ tam zamanlı alarm izinleri
+- QR: `mobile_scanner`; yerel ağ QR'ında sertifika parmak izi doğrulaması (pinning)
+- Dosya: Android paylaş menüsü / dosya seçici; PDF: `pdf` paketi
+- Yedek: Google Drive `appDataFolder`
+- `riverpod` (durum), `go_router` (yönlendirme), `fl_chart` (grafik)
 
 ---
 
 ## 4. FHIR değişim sözleşmesi
 
-İki ürünün konuştuğu tek dil budur. Ayrıntıları `docs/fhir-sozlesmesi.md` dosyasında olacak. `fhir/examples/` altındaki örnek paketleri iki tarafın testleri de kullanacak.
+İki ürünün konuştuğu tek dil budur. Ayrıntılar `docs/fhir-sozlesmesi.md` dosyasında yazılacak (F0). `fhir/examples/` altındaki örnek paketleri hem backend hem mobil testleri kullanır.
 
-**IPS uyumu:** dışa aktarılan paket `Bundle.type = document` olup ilk kaynağı bir `Composition`'dır. Bu belge IPS'in zorunlu bölümlerini (aktif problemler, alerjiler, ilaçlar) ve ilgili bölümleri (aşılar, vital bulgular, plan) içerir. Lokman'a özgü kayıtlar (muayeneler, randevular, planlanan aşılar) ek bölümler olarak aynı pakete girer. Lokman dışı bir sistem bunları yok sayabilir; Lokman ise kayıpsız okur. Üretilen paketler CI'da HL7 FHIR Validator ile IPS profiline karşı doğrulanır.
+**IPS uyumu:** paket `Bundle.type = document`, ilk kaynak `Composition`. IPS'in zorunlu bölümleri (aktif problemler, alerjiler, ilaçlar) ve ilgili bölümleri (aşılar, vital bulgular, plan) bulunur. Lokman'a özgü kayıtlar (muayeneler, randevular, planlanan aşılar) ek bölümlerdir; Lokman dışı sistem bunları yok sayabilir, Lokman kayıpsız okur.
 
-**PDF özet:** paketle aynı içerikten, başlıkları Türkçe/İngilizce iki dilli, yazdırılabilir bir özet. Mobilde Dart `pdf` paketiyle, panelde Laravel tarafında üretilir.
+**PDF özet:** paketle aynı içerikten, Türkçe/İngilizce başlıklı, yazdırılabilir özet.
 
 ### 4.1 Kaynak eşleşmesi
 | Lokman | FHIR R4 kaynağı |
 |---|---|
 | Hasta | `Patient` |
-| Muayene | `Encounter` (bulgular extension ile) |
-| Teşhis / hastalık | `Condition` (ICD-10) |
-| Reçete kalemi | `MedicationRequest` (aynı reçete `groupIdentifier` ile gruplanır; saatler `timing.repeat.timeOfDay` alanında) |
+| Muayene | `Encounter` (bulgular ve öneriler extension ile; iç not aktarılmaz) |
+| Teşhis | `Condition` (ICD-10, `encounter-diagnosis`, ön/kesin tanı = `verificationStatus`) |
+| Kronik hastalık | `Condition` (`problem-list-item`) |
+| Alerji | `AllergyIntolerance` |
+| Reçete kalemi | `MedicationRequest` (`groupIdentifier` ile gruplanır; saatler `timing.repeat.timeOfDay`) |
 | Aşı | `Immunization` |
-| Sonraki aşı dozu | `ImmunizationRecommendation` |
-| Ölçüm | `Observation` (LOINC + UCUM, tansiyon `component` ile) |
-| Alerji / kronik hastalık | `AllergyIntolerance` / `Condition` (problem listesi) |
-| Randevu | `Appointment`: mobilde gelecek randevu ve hatırlatma |
-| Kliniğin kendisi | `Organization`: mobilde "hangi klinikten geldi" bilgisi |
+| Planlanan aşı | `ImmunizationRecommendation` |
+| Ölçüm | `Observation` (LOINC + UCUM; tansiyon `component`) |
+| Randevu | `Appointment` |
+| Klinik / kurum | `Organization` |
 
-### 4.2 Kimlik ve eşleştirme (TCKN'siz)
-- Her klinik kurulumu ilk açılışta kalıcı bir **kurulum kimliği** (UUID) üretir.
-- `Patient.identifier`: `system = urn:lokman:<kurulum-uuid>:patient`, `value = <hasta UUID>`. Varsa TCKN ve pasaport da ek identifier olarak eklenir, ama eşleştirmede zorunlu değildir.
-- **Mobilde içe aktarma:** identifier daha önce görüldüyse ilgili profile eklenir. Görülmediyse kullanıcıya "hangi profil?" sorulur; ad ve doğum tarihine göre öneri yapılır.
-- **Klinikte içe aktarma:** dosyadaki kendi identifier'ı ile hasta otomatik bulunur. Bulunamazsa elle eşleştirilir.
-- Kaynak `id`'leri kararlı UUID'dir. Aynı dosya iki kez aktarılırsa kayıt güncellenir, mükerrer oluşmaz.
+### 4.2 Kimlik ve eşleştirme
+- Her klinik kurulumu kalıcı bir **kurulum kimliği** (UUID), her mobil uygulama kalıcı bir **uygulama kimliği** üretir.
+- `Patient.identifier`: `urn:lokman:<kurulum-uuid>:patient` | `<hasta UUID>`, mobil profil için `urn:lokman:app:<uygulama-uuid>:profile` | `<profil UUID>`. TCKN/pasaport varsa ek identifier.
+- Kaynak `id`'leri kararlı UUID'dir; aynı dosya tekrar aktarılırsa kayıt güncellenir, çoğalmaz.
+- **Mobilde:** bilinen identifier → ilgili profil; bilinmiyorsa "hangi profil?" (ad + doğum tarihine göre öneri).
+- **Klinikte:** bilinen identifier → hasta otomatik bulunur; bilinmiyorsa "yeni hasta oluştur" ya da "mevcut hastayla eşleştir".
 
 ### 4.3 Klinik → telefon
-**A. QR (klinik alan adına sahipse)**
-1. Panelde, hasta sayfasında "Mobil uygulamaya aktar" seçilir. Kapsam belirlenir: tüm kayıt ya da seçili muayene(ler).
-2. Sunucu rastgele bir token üretir. Veritabanında yalnızca token'ın hash'i tutulur. Bağlantının **süresi ve kullanım sayısı klinik ayarlarından** gelir (varsayılan 15 dk, tek kullanım).
-3. QR içeriği: `https://<alan-adi>/fhir/share/<token>`
-4. Uygulama QR'ı okur, bağlantıdan FHIR Bundle'ı **yalnızca HTTPS** ile indirir. Süresi dolmuş ya da kullanım hakkı bitmiş bağlantı `410 Gone` döner. Her indirme erişim loguna yazılır. Panelden bağlantı erken iptal edilebilir.
+**A. QR, internet (alan adı varsa):** panel token üretir (yalnızca hash saklanır; süre/kullanım klinik ayarından). QR: `https://<alan-adi>/fhir/share/<token>`. Süresi dolmuş/kullanılmış bağlantı `410 Gone`. Her indirme loglanır; bağlantı erken iptal edilebilir.
 
-**B. Yerel ağ QR'ı (alan adı yok, telefon kliniğin Wi-Fi'ında)**
-- Sunucu ilk kurulumda kendinden imzalı bir TLS sertifikası üretir ve yerel ağda (ör. `https://192.168.1.10:8443`) dinler.
-- QR içeriği: `lokman://import?u=https://192.168.1.10:8443/fhir/share/<token>&fp=<sertifika SHA-256 parmak izi>`
-- Uygulama yalnızca QR'daki parmak iziyle eşleşen sertifikayı kabul eder (certificate pinning). Böylece sertifika otoritesi olmadan da trafik şifreli olur ve araya girme engellenir.
-- Token, süre ve kullanım sınırı A seçeneğiyle aynıdır. Sunucunun yerel IP'si panel ayarlarından seçilir ya da otomatik algılanır.
+**B. QR, yerel ağ (alan adı yok):** sunucu kendinden imzalı sertifikayla yerel ağda dinler. QR: `lokman://import?u=https://<yerel-ip>:8443/fhir/share/<token>&fp=<sertifika SHA-256>`. Uygulama yalnızca parmak izi eşleşen sertifikayı kabul eder.
 
-**C. Dosya (her durumda kullanılabilir)**
-- Panel `.json` FHIR paketini indirir. Hasta dosyayı e-posta, WhatsApp, USB ile alır ve uygulamada açar.
+**C. Dosya:** panel FHIR dosyasını ve PDF özeti indirir; hasta dosyayı uygulamada açar.
 
 ### 4.4 Telefon → klinik / başka kurum
-Dışa aktarım yalnızca kendi kliniğe dönüş için değildir. Ayşe verisini Lokman kullanan başka bir kliniğe, başka bir hastaneye ya da yurt dışına götürebilir.
+Profilin tüm verisi ya da seçilen kayıtlar dosya olarak paylaşılır. Her kayıt kaynağını taşır (hangi kurum, hasta beyanı mı).
 
-- **Kapsam:** profilin tüm verisi ya da seçilen kayıtlar. Paketteki her kayıt nereden geldiğini taşır: hangi klinik (`Organization`), hastanın kendi girişi mi, kimin girdiği.
-- **Hasta kimliği:** paketteki `Patient` kaynağında profilin bağlı olduğu tüm kliniklerin kimlikleri ve uygulamanın kendi profil kimliği bulunur (`urn:lokman:app:<uygulama-kurulum-uuid>:profile`). Klinik dosyası hiç olmayan bir çocuk profili de böylece tanınabilir.
-- **Lokman kliniğinde içe aktarım:**
-
-| Gelen kayıt | Ne olur |
+| Lokman kliniğine gelen kayıt | Ne olur |
 |---|---|
-| Bu kliniğin kendi ürettiği kayıt (aynı `installation_id`) | Zaten var; atlanır |
-| Hastanın kendi girdiği kayıt | Onay kuyruğuna düşer (`patient_reported`, `pending`). Doktor onaylar ya da reddeder |
-| Başka bir kurumun kaydı (başka klinik, hastane) | **Dış kaynaklı kayıt** olarak aynı tablolara alınır (`source = external`, kurum adıyla). Panelde salt okunur, hasta geçmişinde "X Hastanesi" etiketiyle görünür. Aynı kayıt tekrar gelirse kaynak kimliğinden tanınır, çoğalmaz |
-| Hasta bu klinikte hiç kayıtlı değil | Panel "yeni hasta olarak oluştur" ya da "mevcut hastayla eşleştir" seçeneği sunar |
+| Kliniğin kendi kaydı (aynı kurulum kimliği) | Atlanır |
+| Hasta beyanı | Onay kuyruğuna (`patient_reported`, `pending`) |
+| Başka kurumun kaydı | Dış kaynaklı kayıt (`external`, kurum adıyla, salt okunur) |
+| Klinikte kaydı olmayan kişi | "Yeni hasta" ya da "mevcut hastayla eşleştir" |
 
-- **Lokman dışı kurum:** dosya IPS uyumlu HL7 FHIR R4 olduğu için FHIR destekleyen sistemler doğrudan okuyabilir. Kodlar uluslararası sistemlerden gelir: ICD-10, ATC, LOINC, UCUM. FHIR okuyamayan kurum (ör. yurt dışında bir muayenehane) iki dilli PDF özeti kullanır.
+Lokman dışı kurum IPS uyumlu dosyayı FHIR ile okur; FHIR kullanmayan kurum PDF özeti kullanır.
 
 ---
 
 ## 5. Güvenlik ve KVKK
-
-Sağlık verisi KVKK kapsamında **özel nitelikli kişisel veridir**.
-- **Açık rıza ve aydınlatma:** klinikte rıza kaydı tutulur (`consents`). QR ya da dosya paylaşımından önce rıza kontrol edilir.
-- **Aktarım:** QR bağlantısı her zaman TLS ile çalışır: alan adında gerçek sertifika, yerel ağda parmak izi doğrulamalı kendinden imzalı sertifika kullanılır. Süresi ve kullanım sayısı sınırlıdır. Yönetici süreyi uzatırsa (ör. yazdırılıp verilen QR) risk artar; ayar ekranında uyarı gösterilir.
-- **Düz JSON dosya riski:** dosya şifrelenmediği için yanlış kişiye giderse okunabilir. Panelde paylaşım öncesi uyarı gösterilir ve indirme erişim loguna yazılır. Şifreli paket ileride eklenebilir.
-- **Depolama:** klinikte PostgreSQL ve yedekler kurumun sorumluluğundadır (kurulum dokümanında öneriler yer alacak). Mobilde veri Android uygulama alanında durur. Drive yedeği kullanıcının kendi hesabına gider.
-- **Yetkilendirme:** rol bazlı (Laravel Policy). Mobilde kullanıcı yoktur.
-- **Erişim logu:** hasta görüntüleme, değişiklik, dışa aktarma, paylaşım, içe aktarma.
+- **Rıza:** KVKK aydınlatma, açık rıza ve mobil paylaşım rızası kaydı (`consents`). Geçerli paylaşım rızası yoksa QR/dosya üretilmez.
+- **Aktarım:** QR her zaman TLS ile; internet bağlantısında gerçek sertifika, yerel ağda parmak izi doğrulamalı sertifika. Süre ve kullanım sınırlı; uzun süre ayarında uyarı.
+- **Düz JSON riski:** dosya şifrelenmez; paylaşım öncesi uyarı ve erişim logu. Şifreli paket ileride eklenebilir.
+- **Depolama:** klinikte veritabanı/disk şifrelemesi ve yedekleme önerileri kurulum dokümanında. Mobilde veri uygulama alanında; Drive yedeği kullanıcının kendi hesabında.
+- **Yetki:** rol + kayıt düzeyi Policy. Sekreter klinik içeriği göremez.
+- **Erişim logu:** görüntüleme, değişiklik, silme, dışa aktarma, paylaşım, indirme, içe aktarma, giriş denemeleri. Log tablosu değiştirilemez.
 
 ---
 
-## 6. Depo yapısı (öneri)
+## 6. Depo yapısı
 ```
 lokman/
 ├── backend/          Laravel + Filament (klinik sistemi)
 ├── mobile/           Flutter (hasta uygulaması)
-├── fhir/examples/    Örnek FHIR paketleri (iki tarafın sözleşme testleri)
-├── docs/             PLAN.md, fhir-sozlesmesi.md, kurulum.md
-└── docker-compose.yml
+├── fhir/examples/    Örnek FHIR/IPS paketleri (iki tarafın sözleşme testleri)
+├── docs/             PLAN.md, VERITABANI.md, fhir-sozlesmesi.md, kurulum.md
+├── docker-compose.yml
+└── .github/workflows/ CI
 ```
 
 ---
 
-## 7. Fazlar
+## 7. İş planı
 
-| Faz | Kapsam | Çıktı |
-|---|---|---|
-| **F0: Temel** | Depo, Docker Compose, Laravel + Filament iskeleti, Flutter iskeleti, CI (Pest, `flutter test`, FHIR validator), FHIR sözleşmesi ve örnek paketler | Çalışan boş panel + boş APK |
-| **F1: Klinik çekirdek** | Kullanıcılar/roller, hasta kaydı, doktor randevuları, muayene → teşhis (ICD-10), reçete (ilaç katalogu, doz saatleri), erişim logu | Randevu, muayene ve reçete yazılabilen panel |
-| **F2: Aşı ve ölçüm** | Aşı kaydı, sonraki doz, ulusal aşı takvimi, ölçümler, hasta beyanı onay kuyruğu | |
-| **F3: Klinik aktarım** | IPS uyumlu FHIR dışa aktarım + PDF özet, QR süreli bağlantı, dosya indirme, FHIR içe aktarım (dış kaynaklı kayıtlar dahil) ve onay akışı | Panelden QR/dosya üretimi |
-| **F4: Mobil MVP** | Aile profilleri, QR/dosya ile içe aktarma, muayene geçmişi, ilaçlar ve doz hatırlatma, aşı takvimi ve hatırlatma, randevu hatırlatma, ölçüm girişi ve grafik, IPS uyumlu dışa aktarma + PDF özet | **İlk Android APK** |
-| **F5: Yayın** | Drive yedeği, KVKK ekranları, APK imzalama, kurulum dokümanı, demo verisi | v0.1 sürümü |
-| Sonra | e-Nabız / e-Reçete dönüştürücü katmanı, iOS, şifreli paket | |
+Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra FHIR sözleşmesi ve örnek paketler hazır olduğu için **backend (F1–F3) ve mobil (F4) paralel ilerleyebilir.**
+
+### F0: Temel ve sözleşme
+- [ ] Depo yapısı, `docker-compose.yml` (caddy, php-fpm, postgres, queue, scheduler)
+- [ ] Laravel + Filament iskeleti, PostgreSQL bağlantısı, giriş ekranı
+- [ ] Flutter iskeleti, Android derlemesi
+- [ ] CI: Pint, Larastan, Pest, `flutter analyze`, `flutter test`, HL7 FHIR Validator
+- [ ] `docs/fhir-sozlesmesi.md`: alan alan eşleme, identifier kuralları, extension tanımları
+- [ ] `fhir/examples/`: Ayşe senaryosundan örnek paketler (klinik çıktısı, mobil çıktısı, çocuk profili, dış kurum kaydı)
+
+**Bitti sayılır:** `docker compose up` ile panele giriş yapılır; boş APK telefonda açılır; örnek paketler validator'dan geçer.
+
+### F1: Klinik çekirdek
+- [ ] Migration'lar (VERITABANI.md'ye göre), seed: roller, ölçüm türleri, aşılar, aşı takvimi
+- [ ] Kullanıcılar ve roller, Policy'ler, erişim logu
+- [ ] Hasta kaydı: kimlikler (TCKN doğrulama), alerjiler, kronik hastalıklar, rızalar, Türkçe karakterli arama
+- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı, ICD-10 yükleme
+- [ ] Randevu takvimi (doktor kendi, sekreter tümü), çakışma kısıtı
+- [ ] Muayene, teşhis (ön/kesin), reçete (saatler, süre, tür, kutu), ilaç–alerji uyarısı
+
+**Bitti sayılır:** Ayşe senaryosunun 1–3. adımları panelde uçtan uca yapılabilir; sekreter muayene içeriğini göremez (test ile).
+
+### F2: Aşı, ölçüm, onay kuyruğu
+- [ ] Aşı kaydı, planlanan aşılar, "yapıldı" bağlantısı, ulusal takvim önerileri
+- [ ] Gecikmiş / bu hafta aşı listeleri
+- [ ] Ölçümler, normal aralık uyarısı, grafikler
+- [ ] Onay kuyruğu (aşı, alerji, kronik hastalık, ölçüm)
+
+**Bitti sayılır:** Td aşısı kontrole planlanır, kontrolde yapılır ve plan "tamamlandı" olur.
+
+### F3: Klinik aktarım
+- [ ] FHIR/IPS dışa aktarım (iç not hariç), PDF özet
+- [ ] QR paylaşımı: internet ve yerel ağ (sertifika üretimi, parmak izi), süre/kullanım ayarları, iptal
+- [ ] FHIR içe aktarım: hasta eşleştirme, hasta beyanı → onay kuyruğu, dış kaynaklı kayıtlar, tekrar aktarımda çoğalmama
+- [ ] İçe aktarım geçmişi
+
+**Bitti sayılır:** `fhir/examples/` paketleri içe aktarılır; dışa aktarılan paket validator'dan geçer; aynı dosya iki kez aktarılınca kayıt sayısı değişmez.
+
+### F4: Mobil MVP (ilk Android APK)
+- [ ] Yerel veritabanı, aile profilleri (klinik dosyası olmadan da)
+- [ ] İçe aktarım: QR (internet + yerel ağ pinning) ve dosya, profil eşleştirme
+- [ ] Muayeneler, ilaçlar, aşılar, alerjiler, ölçümler, randevular ekranları
+- [ ] Bildirimler: doz saatleri, planlanan aşılar, randevular; aldım/atladım
+- [ ] Kullanıcı girişleri: aşı, alerji, kronik hastalık, ölçüm
+- [ ] Dışa aktarım: tüm veri / seçili kayıtlar, IPS uyumlu FHIR + PDF özet
+
+**Bitti sayılır:** Ayşe senaryosunun 4–6. adımları gerçek telefonda yapılır; telefondan alınan dosya panele aktarılır.
+
+### F5: Yayın (v0.1)
+- [ ] Google Drive yedeği / geri yükleme
+- [ ] KVKK metinleri ve ekranları (panel + mobil)
+- [ ] APK imzalama ve sürüm yayını
+- [ ] `docs/kurulum.md`: kurulum, alan adı/yerel ağ, yedekleme, güncelleme
+- [ ] Demo verisi
+
+**Bitti sayılır:** temiz bir sunucuda kurulum dokümanıyla kurulur; imzalı APK yayınlanır.
+
+### Sonra
+e-Nabız / e-Reçete dönüştürücü katmanı, iOS, şifreli paket, randevu için SMS/e-posta hatırlatma, çoklu rol.
 
 ---
 
-## 8. Açık konular
-- [ ] Randevu: süre/slot ayarı (ör. 15–20 dk), çakışma kontrolü, hastaya SMS/e-posta hatırlatma olacak mı?
+## 8. Test yaklaşımı
+- **Backend:** Pest ile birim ve özellik testleri; her Policy için yetki testleri (özellikle sekreterin göremediği alanlar); FHIR dışa/içe aktarım testleri `fhir/examples/` ile.
+- **Mobil:** FHIR ayrıştırma, profil eşleştirme ve bildirim zamanlama birim testleri; ekranlar için widget testleri.
+- **Sözleşme:** her iki tarafın ürettiği paketler CI'da HL7 FHIR Validator ile IPS profiline karşı doğrulanır; bir tarafın çıktısı diğer tarafın testinde girdi olarak kullanılır.
+- **Senaryo testi:** Ayşe senaryosu her faz sonunda elle de doğrulanır.
+
+---
+
+## 9. Riskler
+| Risk | Önlem |
+|---|---|
+| IPS profilinin ayrıntıları (zorunlu alanlar, kod sistemleri) beklenenden katı | F0'da örnek paketleri validator'dan geçirerek sözleşmeyi erken sabitlemek |
+| TİTCK ve ICD-10 Türkçe listelerinin biçimi değişebilir / lisans koşulları | İçe aktarıcıyı esnek sütun eşlemeli yazmak; kaynak ve kullanım koşullarını F1'de doğrulamak |
+| Android bildirim kısıtlamaları (pil optimizasyonu, tam zamanlı alarm izni) | İzin akışını açık anlatmak, gerçek cihazlarda test |
+| Düz JSON dosyanın yanlış kişiye gitmesi | Paylaşım uyarısı, erişim logu; şifreli paket "Sonra" listesinde |
+| Yerel ağda IP değişmesi | Panelde IP seçimi/otomatik algılama, QR'ın kısa süreli olması |
+
+---
+
+## 10. Açık konular
+- [ ] Randevu için hastaya SMS / e-posta hatırlatma (şimdilik "Sonra")
 - [ ] Ödeme / fatura modülü (şimdilik kapsam dışı)
-- [ ] e-Nabız ve e-Reçete entegrasyonunun kapsamı ve zamanı. Güncel format Sağlık Bakanlığı dokümanlarından doğrulanacak
+- [ ] e-Nabız ve e-Reçete entegrasyonunun kapsamı ve zamanı (güncel format Sağlık Bakanlığı dokümanlarından doğrulanacak)

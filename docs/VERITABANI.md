@@ -1,6 +1,6 @@
 # Lokman — Veritabanı Tasarımı
 
-> Durum: **taslak, onay bekliyor.** Kodlamaya bu tasarım onaylandıktan sonra başlanacak.
+> Durum: **onaylandı (v1).** Kodlamaya henüz başlanmadı.
 > İlgili: [PLAN.md](PLAN.md)
 
 Bu belge iki veritabanını kapsar:
@@ -554,9 +554,12 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 
 ---
 
-## 7. Onay bekleyen tasarım kararları
-- [ ] Teşhiste "ön tanı / kesin tanı" ayrımı olsun mu?
-- [ ] Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulsun mu?
-- [ ] Muayenede "hikaye/anamnez" ve hastaya giden "öneriler/plan" alanları ayrı olsun mu?
-- [ ] Protokol numarası biçimi (`2026-000123` ya da sıralı sayı)
-- [ ] TCKN gibi kimlikler veritabanında düz mü saklansın, yoksa şifreli + arama için hash mi? Şifreleme TCKN ile hasta aramayı zorlaştırır
+## 7. Kesinleşen tasarım kararları
+- Alerjiler ve kronik hastalıklar ayrı, yapısal tablolarda; hasta beyanı onay akışıyla.
+- Teşhiste ön tanı / kesin tanı ayrımı var (`diagnoses.verification`).
+- Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulur.
+- Muayenede hikaye, bulgular, hastaya giden öneriler (`plan`) ve iç not ayrı alanlar.
+- Protokol numarası yıl + sıra: `2026-000123` (yıl başında sıra sıfırlanır; PostgreSQL sequence + yıl).
+- TCKN ve diğer kimlikler düz saklanır (arama ve algoritma doğrulaması için). Koruma veritabanı/disk düzeyinde şifreleme, rol bazlı erişim ve erişim logu ile sağlanır.
+- Başka kurumdan gelen kayıtlar aynı tablolara `source = external` ile eklenir.
+- Planlanan aşılar ayrı tabloda (`planned_immunizations`).
