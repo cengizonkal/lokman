@@ -45,6 +45,8 @@ flowchart LR
 | Mobil profiller | **Aile profilleri**: tek uygulamada birden fazla kişi (ör. anne ve çocukları) |
 | Mobil yedek | **İsteğe bağlı Google Drive yedeği** |
 | Birden çok klinik | Mobil uygulama farklı kliniklerden gelen dosyaları aynı profilde birleştirir. Klinik sistemi tek kliniktir |
+| Veri taşınabilirliği | Veri hastanındır. Mobil uygulama bir profilin **tüm verisini** (hangi klinikten gelmiş olursa olsun) FHIR dosyası olarak dışa aktarır. Lokman kullanan başka bir klinik, FHIR destekleyen herhangi bir hastane ya da yurt dışındaki bir kurum bu dosyayı alabilir |
+| İlaç uyumu | "Aldım / atladım" kayıtları **yalnızca mobilde** kalır, hiçbir dışa aktarıma girmez |
 | Terminoloji | Teşhis için ICD-10, ilaç için ATC, ölçümler için LOINC, birimler için UCUM. İleride SNOMED CT |
 | Kod dili | Kod tanımlayıcıları İngilizce (Laravel ve Flutter gelenekleri), arayüz Türkçe |
 | Roller | Yönetici, doktor, sekreter. Sekreter muayene notlarını, teşhisleri ve reçeteleri göremez |
@@ -124,14 +126,14 @@ medications, icd10_codes, vaccines, vaccine_schedule_templates                  
 ### 3.1 Ekranlar
 | Ekran | İçerik |
 |---|---|
-| Profiller | Aile üyeleri. Her profilin hangi kliniklere bağlı olduğu |
+| Profiller | Aile üyeleri. Ebeveyn çocuğu için klinik dosyası olmadan da profil açabilir; alerji, kronik hastalık, aşı ve ölçümleri kendisi girer. Her profilin hangi kliniklere bağlı olduğu görünür |
 | Bugün | Günün ilaç dozları (aldım / atladım), yaklaşan aşılar, son ölçümler |
 | Muayeneler | Klinik, tarih, doktor, şikayet, bulgular, teşhisler, reçeteler |
 | İlaçlarım | Aktif ilaçlar, kullanım saatleri, bitiş tarihi, uyum oranı |
 | Aşılar | Yapılan aşılar, aşı takvimi (gecikmiş / yaklaşan), hastanın kendi girdiği aşılar ("doğrulanmadı" etiketiyle) |
 | Sağlık takibi | Ölçüm girişi ve grafikler |
 | İçe aktar | QR okut ya da dosya aç |
-| Dışa aktar | Seçili profil ve kayıtlar için FHIR JSON dosyası, Android paylaş menüsü ile |
+| Dışa aktar | Seçili profilin tüm verisi ya da seçilen kayıtlar (ör. yalnızca aşılar ve alerjiler) FHIR JSON dosyası olarak, Android paylaş menüsü ile |
 | Ayarlar | Bildirim tercihleri, isteğe bağlı Google Drive yedeği ve geri yükleme |
 
 ### 3.2 Teknik
@@ -187,9 +189,21 @@ medications, icd10_codes, vaccines, vaccine_schedule_templates                  
 **C. Dosya (her durumda kullanılabilir)**
 - Panel `.json` FHIR paketini indirir. Hasta dosyayı e-posta, WhatsApp, USB ile alır ve uygulamada açar.
 
-### 4.4 Telefon → klinik
-- Uygulama seçili kayıtları (hastanın girdiği aşılar, ölçümler) FHIR JSON dosyası olarak dışa aktarır.
-- Klinik paneli dosyayı içe aktarır. Hastanın girdiği kayıtlar `source = patient_reported`, `verified = false` olarak **onay kuyruğuna** düşer. Doktor onaylayınca doğrulanmış olur.
+### 4.4 Telefon → klinik / başka kurum
+Dışa aktarım yalnızca kendi kliniğe dönüş için değildir. Ayşe verisini Lokman kullanan başka bir kliniğe, başka bir hastaneye ya da yurt dışına götürebilir.
+
+- **Kapsam:** profilin tüm verisi ya da seçilen kayıtlar. Paketteki her kayıt nereden geldiğini taşır: hangi klinik (`Organization`), hastanın kendi girişi mi, kimin girdiği.
+- **Hasta kimliği:** paketteki `Patient` kaynağında profilin bağlı olduğu tüm kliniklerin kimlikleri ve uygulamanın kendi profil kimliği bulunur (`urn:lokman:app:<uygulama-kurulum-uuid>:profile`). Klinik dosyası hiç olmayan bir çocuk profili de böylece tanınabilir.
+- **Lokman kliniğinde içe aktarım:**
+
+| Gelen kayıt | Ne olur |
+|---|---|
+| Bu kliniğin kendi ürettiği kayıt (aynı `installation_id`) | Zaten var; atlanır |
+| Hastanın kendi girdiği kayıt | Onay kuyruğuna düşer (`patient_reported`, `pending`). Doktor onaylar ya da reddeder |
+| Başka bir kurumun kaydı (başka klinik, hastane) | **Dış kaynaklı kayıt** olarak alınır. Saklama biçimi henüz kararlaştırılmadı (bkz. Açık konular) |
+| Hasta bu klinikte hiç kayıtlı değil | Panel "yeni hasta olarak oluştur" ya da "mevcut hastayla eşleştir" seçeneği sunar |
+
+- **Lokman dışı kurum:** dosya standart HL7 FHIR R4 olduğu için FHIR destekleyen sistemler doğrudan okuyabilir. Kodlar uluslararası sistemlerden gelir: ICD-10, ATC, LOINC, UCUM.
 
 ---
 
@@ -232,6 +246,9 @@ lokman/
 ---
 
 ## 8. Açık konular
+- [ ] Başka kurumdan gelen kayıtlar (muayene, reçete…) klinikte nasıl saklansın?
+- [ ] Yurt dışı paylaşım için HL7 **International Patient Summary (IPS)** profiline uyum ve dosyayla birlikte okunabilir bir PDF özet üretilsin mi?
+- [ ] Dışa aktarılan dosyada Türkçe metinlerin yanında İngilizce karşılıklar (ör. teşhis ve aşı adları) olsun mu?
 - [ ] Randevu: süre/slot ayarı (ör. 15–20 dk), çakışma kontrolü, hastaya SMS/e-posta hatırlatma olacak mı?
 - [ ] Ödeme / fatura modülü (şimdilik kapsam dışı)
 - [ ] e-Nabız ve e-Reçete entegrasyonunun kapsamı ve zamanı. Güncel format Sağlık Bakanlığı dokümanlarından doğrulanacak

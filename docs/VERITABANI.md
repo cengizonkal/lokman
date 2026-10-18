@@ -161,13 +161,14 @@ Yalnızca ekleme yapılır. Bir veritabanı tetikleyicisi `UPDATE` ve `DELETE` i
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients, cascade |
-| type | varchar(20) | CHECK in (`tckn`, `passport`, `yupassport`, `other`) |
-| value | varchar(50) | not null. TCKN girilirse algoritmayla doğrulanır |
+| type | varchar(20) | CHECK in (`tckn`, `passport`, `yupassport`, `lokman`, `other`) |
+| system | varchar(255) | FHIR `identifier.system`. Başka Lokman kliniği ya da mobil uygulama kimliği için ör. `urn:lokman:<kurulum-uuid>:patient`, `urn:lokman:app:<uuid>:profile` |
+| value | varchar(100) | not null. TCKN girilirse algoritmayla doğrulanır |
 | issuer | varchar(50) | ör. pasaportu veren ülke (ISO 3166) |
 | created_at, updated_at | timestamptz | |
 
-Kısıt: `unique(type, value)`, aynı kimlik iki hastaya verilemez.
-FHIR: `Patient.identifier[]` dizisine eklenir. Eşleştirmede kullanılmaz; eşleştirme `installation_id` + hasta UUID ile yapılır.
+Kısıt: `unique(type, system, value)`, aynı kimlik iki hastaya verilemez.
+FHIR: `Patient.identifier[]` dizisine eklenir. Bu kurulumun kendi kimliği (`installation_id` + hasta UUID) burada tutulmaz, `patients.id`'den üretilir. Dosyadan gelen diğer Lokman kimlikleri (başka klinik, mobil profil) burada saklanır; aynı kişiden ikinci dosya geldiğinde hasta otomatik bulunur.
 
 ### `patient_allergies`: alerjiler
 | Kolon | Tip | Not |
@@ -179,9 +180,13 @@ FHIR: `Patient.identifier[]` dizisine eklenir. Eşleştirmede kullanılmaz; eşl
 | reaction | varchar(300) | ör. "ürtiker" |
 | severity | varchar(10) | CHECK in (`mild`, `moderate`, `severe`) |
 | note | text | |
+| source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
+| verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`). Ör. ebeveynin mobilde çocuğu için girdiği alerji `pending` gelir |
+| verified_by, verified_at | | |
+| import_id | uuid null | → imports |
 | created_by, timestamps, deleted_at | | |
 
-FHIR: `AllergyIntolerance`
+FHIR: `AllergyIntolerance`. Onay bekleyen alerji de reçete ekranındaki uyarıda gösterilir ("hasta beyanı" etiketiyle); güvenlik açısından doğrulanmasını beklemek doğru olmaz.
 
 ### `patient_conditions`: kronik hastalıklar (problem listesi)
 | Kolon | Tip | Not |
@@ -193,6 +198,10 @@ FHIR: `AllergyIntolerance`
 | onset_date | date | |
 | status | varchar(10) | CHECK in (`active`, `resolved`), default `active` |
 | note | text | |
+| source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
+| verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`) |
+| verified_by, verified_at | | |
+| import_id | uuid null | → imports |
 | created_by, timestamps, deleted_at | | |
 
 FHIR: `Condition` (category = `problem-list-item`)
@@ -507,24 +516,26 @@ Akış: hastanın dosyası yüklenir. Dosyadaki `installation_id` + hasta UUID b
 
 ## 6. Mobil uygulama: yerel SQLite (drift)
 
-Sunucu yok; veri telefonda durur. Kaynak kimlikleri klinikten gelen UUID'lerdir. Aynı dosya iki kez içe aktarılırsa kayıt güncellenir.
+Sunucu yok; veri telefonda durur. Klinikten gelen kayıtların kimliği klinikteki UUID'dir; hastanın kendi girdiği kayıtlara uygulama UUID üretir. Aynı dosya iki kez içe aktarılırsa kayıt güncellenir.
+
+Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. Her profil, dışa aktarımda `urn:lokman:app:<uygulama-kurulum-uuid>:profile` kimliğiyle tanınır. Böylece hiçbir klinikte kaydı olmayan bir çocuk profili de alıcı klinikte tanınabilir.
 
 | Tablo | İçerik |
 |---|---|
-| `profiles` | Aile üyeleri: ad, soyad, doğum tarihi, cinsiyet, kan grubu, renk/avatar |
+| `profiles` | Aile üyeleri: id (uuid), ad, soyad, doğum tarihi, cinsiyet, kan grubu, renk/avatar. Ebeveyn çocuk profilini klinik dosyası olmadan açabilir |
 | `profile_links` | Profil ↔ klinik eşlemesi: `installation_id`, klinikteki hasta UUID'si, klinik adı. Bir profil birden çok kliniğe bağlanabilir |
 | `encounters` | Muayene: klinik, tarih, doktor, şikayet, bulgular, plan |
 | `diagnoses` | Teşhis (ICD-10 kodu, açıklama, ön/kesin) |
 | `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre |
-| `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde** |
+| `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde kalır, hiçbir dışa aktarıma girmez** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
 | `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları + profilin yaşına göre ulusal takvim önerileri |
 | `observations` | Ölçümler (klinikten gelen + hastanın girdiği) |
 | `appointments` | Klinikten gelen gelecek randevular |
-| `allergies`, `conditions` | Alerji ve kronik hastalıklar |
+| `allergies`, `conditions` | Alerji ve kronik hastalıklar. `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
 | `fhir_resources` | Her kaynağın ham FHIR JSON'u (`resource_type`, `id`, `profile_id`, `json`, `last_updated`). Kayıpsız dışa aktarım ve ileride yeni alanlar için |
 | `import_history` | Ne zaman, hangi klinikten, kaç kayıt geldi |
-| `app_settings` | Bildirim tercihleri, Drive yedeği açık/kapalı, son yedek zamanı |
+| `app_settings` | Uygulama kurulum kimliği, bildirim tercihleri, Drive yedeği açık/kapalı, son yedek zamanı |
 
 Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.times_of_day` ile doz bildirimleri, `immunization_due` ile aşı bildirimleri, `appointments` ile randevu bildirimleri.
 
@@ -536,4 +547,5 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 - [ ] Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulsun mu?
 - [ ] Muayenede "hikaye/anamnez" ve hastaya giden "öneriler/plan" alanları ayrı olsun mu?
 - [ ] Protokol numarası biçimi (`2026-000123` ya da sıralı sayı)
+- [ ] Başka kurumdan gelen muayene/reçete/teşhis kayıtlarının saklanma biçimi (bkz. PLAN.md, Açık konular)
 - [ ] TCKN gibi kimlikler veritabanında düz mü saklansın, yoksa şifreli + arama için hash mi? Şifreleme TCKN ile hasta aramayı zorlaştırır
