@@ -77,6 +77,8 @@ flowchart LR
 | Sekreter | Hasta kaydı, aşı ve ölçüm girişi, paylaşım. Muayene notlarını, teşhisleri ve reçeteleri **göremez, giremez**. Randevular doktora aittir (sekreterin randevu yetkisi gerekirse sonra eklenir) |
 
 ### 2.3 Veri modeli (taslak)
+> Ayrıntılı ve güncel tasarım: [VERITABANI.md](VERITABANI.md). Aşağıdaki liste özet niteliğindedir.
+
 Tüm tablolarda birincil anahtar **UUID**'dir. Böylece FHIR `id` alanı kararlı kalır ve tekrarlanan aktarımlar mükerrer kayıt üretmez.
 
 ```
