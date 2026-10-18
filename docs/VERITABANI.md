@@ -13,12 +13,14 @@ Bu belge iki veritabanını kapsar:
 
 | Kural | Açıklama |
 |---|---|
-| Birincil anahtar | `uuid`, Laravel `HasUuids` ile uygulamada üretilir (zaman sıralı UUIDv7). FHIR `id` alanı doğrudan bu değerdir; tekrarlanan aktarımlar mükerrer kayıt üretmez. İstisnalar: `access_logs` (`bigint identity`), kataloglarda doğal anahtarlar (`icd10_codes.code`, `settings.key`) |
+| Birincil anahtar | `uuid`, Laravel `HasUuids` ile uygulamada üretilir (zaman sıralı UUIDv7). FHIR `id` alanı doğrudan bu değerdir; tekrarlanan aktarımlar mükerrer kayıt üretmez. İstisnalar: `access_logs` (`bigint identity`), kataloglarda doğal anahtarlar (`icd10_codes.code`, `atc_codes.code`, `settings.key`) |
 | Zaman | Anlık zamanlar `timestamptz`, takvim günleri `date`. Kliniğin saat dilimi `settings.timezone` (varsayılan `Europe/Istanbul`) |
 | Durum alanları | PostgreSQL `enum` tipi yerine `varchar + CHECK`. Yeni değer eklemek migration ile kolay olur |
 | Silme | Klinik kayıtlar **yumuşak silinir** (`deleted_at`). Tıbbi kayıt fiziksel olarak silinmez; silme işlemi erişim loguna yazılır |
 | Kim yaptı | Klinik tablolarında `created_by` / `updated_by` (→ `users.id`) |
-| Dış kaynaklı kayıt | Başka kurumdan (başka Lokman kliniği, hastane, yurt dışı) gelen muayene, teşhis, reçete, aşı ve ölçümler **aynı tablolara** `source = external` ile yazılır, panelde salt okunur ve kurum adı etiketiyle gösterilir. Ortak kolonlar: `origin_name` (kurum adı), `origin_practitioner` (dış hekim adı), `origin_ref` (kaynak sistemdeki FHIR kimliği, `system|value`; aynı dosya tekrar gelirse mükerrer kayıt oluşmaz), `import_id` |
+| Dış kaynaklı kayıt | Başka kurumdan (başka Lokman kliniği, hastane, yurt dışı) gelen muayene, teşhis, reçete, aşı, ölçüm, alerji ve kronik hastalıklar **aynı tablolara** `source = external` ile yazılır, `verified` olarak doğar, onay kuyruğuna girmez, panelde salt okunur ve kurum adı etiketiyle gösterilir. Ortak kolonlar: `origin_name` (kurum adı), `origin_practitioner` (dış hekim adı), `origin_ref` (kaynak sistemdeki FHIR kimliği, `system|value`), `import_id` |
+| Tekrar aktarım | `origin_ref` dosyadan gelen **her** kayıtta doldurulur (`external` ve `patient_reported`). Her tabloda kısmi tekil indeks: `unique(origin_ref) WHERE origin_ref IS NOT NULL`. Aynı kayıt tekrar gelirse yeni satır açılmaz, mevcut satır güncellenir |
+| Katalogda olmayan kod | Katalog FK'leri (`icd10_code`, `type_code`) yalnızca kod katalogda varsa doldurulur. Ham kodlama her zaman `coding` (jsonb) kolonunda saklanır: `[{"system": "...", "code": "...", "display": "..."}]`. Böylece ICD-10-CM, SNOMED CT ya da bilinmeyen LOINC kodlu dış kayıtlar reddedilmez ve kayıpsız dışa aktarılır |
 | Anlık kopya | Katalogdan seçilen ilaç, aşı ve tanının adı ve kodu kayda **kopyalanır**. Katalog sonradan değişse de eski reçete aynı kalır |
 | Eklentiler | `pg_trgm` (Türkçe ad aramasında benzerlik), `btree_gist` (randevu çakışma kısıtı) |
 | Adlandırma | Tablo ve kolon adları İngilizce, `snake_case`, tablo adları çoğul (Laravel geleneği). Türkçe karşılıkları aşağıda |
@@ -56,6 +58,7 @@ erDiagram
     medications ||--o{ prescription_items : "katalog"
     icd10_codes ||--o{ diagnoses : "hastalık"
     icd10_codes ||--o{ patient_conditions : ""
+    atc_codes ||--o{ patient_allergies : "ilaç alerjisi"
     vaccines ||--o{ immunizations : "katalog"
     vaccines ||--o{ planned_immunizations : "katalog"
     planned_immunizations |o--o| immunizations : "yapılınca bağlanır"
@@ -105,8 +108,7 @@ Başlıca anahtarlar:
 | `clinic.name`, `clinic.address`, `clinic.phone` | Klinik bilgileri |
 | `timezone` | Varsayılan `Europe/Istanbul` |
 | `share.ttl_minutes`, `share.max_uses` | QR bağlantısının süresi ve kullanım sayısı (varsayılan 15 ve 1) |
-| `share.public_base_url` | Alan adı (varsa) |
-| `share.lan_base_url`, `share.lan_cert_fingerprint` | Yerel ağ QR'ı için |
+| `share.public_base_url` | Alan adı (varsa). Yoksa QR paylaşımı kapalıdır, yalnızca dosya |
 | `appointment.default_minutes` | Varsayılan randevu süresi |
 
 ### `access_logs`: erişim logu (KVKK)
@@ -176,25 +178,38 @@ FHIR: `Patient.identifier[]` dizisine eklenir. Bu kurulumun kendi kimliği (`ins
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients |
-| substance | varchar(200) | not null, ör. "Penisilin" |
+| substance | varchar(200) | not null, ör. "Penisilin" (görünen ad) |
 | category | varchar(20) | CHECK in (`medication`, `food`, `environment`, `other`) |
+| atc_code | varchar(10) null | → atc_codes. İlaç alerjisinde ATC kodu ya da grubu, ör. `J01C` (penisilinler) ya da `J01CA04` (amoksisilin) |
+| active_ingredient | varchar(300) null | İlaç alerjisinde etken madde (`medications.active_ingredient` ile aynı yazım) |
+| coding | jsonb | Dosyadan gelen ham kodlama (bkz. genel kurallar) |
 | reaction | varchar(300) | ör. "ürtiker" |
 | severity | varchar(10) | CHECK in (`mild`, `moderate`, `severe`) |
 | note | text | |
 | source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`). Ör. ebeveynin mobilde çocuğu için girdiği alerji `pending` gelir |
 | verified_by, verified_at | | |
+| origin_name, origin_ref | varchar | Dosyadan gelen alerji için (bkz. genel kurallar) |
 | import_id | uuid null | → imports |
 | created_by, timestamps, deleted_at | | |
 
-FHIR: `AllergyIntolerance`. Onay bekleyen alerji de reçete ekranındaki uyarıda gösterilir ("hasta beyanı" etiketiyle); güvenlik açısından doğrulanmasını beklemek doğru olmaz.
+İndeksler: `(patient_id)`, `(atc_code)`, `unique(origin_ref) WHERE origin_ref IS NOT NULL`
+FHIR: `AllergyIntolerance` (`code`: ATC kodu, yoksa yalnızca `text`). Onay bekleyen alerji de reçete ekranındaki uyarıda gösterilir ("hasta beyanı" etiketiyle); güvenlik açısından doğrulanmasını beklemek doğru olmaz.
+
+**İlaç–alerji uyarısı:** reçeteye eklenen ilaç için, hastanın `rejected` olmayan alerjileri taranır:
+- `prescription_items.atc_code`, alerjinin `atc_code` değeriyle **başlıyorsa** uyarı (ör. `J01CA04` ⊂ `J01C`)
+- etken madde eşitse uyarı
+- `category = medication` olup kodu ve etken maddesi olmayan alerji varsa genel uyarı: "Kodsuz ilaç alerjisi var, kontrol edin"
+
+Panelde alerji girerken madde `atc_codes` ve ilaç katalogundaki etken maddelerden aranarak seçilir; bulunamazsa serbest metin girilir.
 
 ### `patient_conditions`: kronik hastalıklar (problem listesi)
 | Kolon | Tip | Not |
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients |
-| icd10_code | varchar(10) null | → icd10_codes |
+| icd10_code | varchar(10) null | → icd10_codes. Yalnızca kod katalogda varsa |
+| coding | jsonb | Ham kodlama (dosyadan gelen ya da katalogda olmayan kod) |
 | description | varchar(300) | not null (kod yoksa serbest metin) |
 | onset_date | date | |
 | status | varchar(10) | CHECK in (`active`, `resolved`), default `active` |
@@ -202,9 +217,11 @@ FHIR: `AllergyIntolerance`. Onay bekleyen alerji de reçete ekranındaki uyarıd
 | source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`) |
 | verified_by, verified_at | | |
+| origin_name, origin_ref | varchar | Dosyadan gelen kayıt için (bkz. genel kurallar) |
 | import_id | uuid null | → imports |
 | created_by, timestamps, deleted_at | | |
 
+İndeks: `unique(origin_ref) WHERE origin_ref IS NOT NULL`
 FHIR: `Condition` (category = `problem-list-item`)
 
 ### `consents`: KVKK aydınlatma ve açık rıza
@@ -259,7 +276,7 @@ FHIR: `Appointment` (yalnızca gelecek randevular paylaşılır)
 | doctor_id | uuid null | → users. CHECK: `source = 'clinic'` ise dolu olmalı |
 | appointment_id | uuid null | → appointments, unique (bir randevudan tek muayene) |
 | source | varchar(10) | CHECK in (`clinic`, `external`), default `clinic` |
-| origin_name, origin_practitioner, origin_ref | varchar | Dış kaynaklı kayıtlar için (bkz. genel kurallar). `unique(origin_ref)` |
+| origin_name, origin_practitioner, origin_ref | varchar | Dış kaynaklı kayıtlar için (bkz. genel kurallar). `unique(origin_ref) WHERE origin_ref IS NOT NULL` |
 | import_id | uuid null | → imports |
 | started_at | timestamptz | not null |
 | ended_at | timestamptz | |
@@ -279,7 +296,8 @@ FHIR: `Encounter`. Şikayet `reasonCode`, bulgular ve plan extension olarak taş
 |---|---|---|
 | id | uuid | PK |
 | encounter_id | uuid | → encounters, cascade |
-| icd10_code | varchar(10) null | → icd10_codes (hastalık) |
+| icd10_code | varchar(10) null | → icd10_codes (hastalık). Yalnızca kod katalogda varsa |
+| coding | jsonb | Ham kodlama. Dış kaynaklı muayenede katalogda olmayan kod (ör. ICD-10-CM) burada kalır |
 | description | varchar(300) | not null (katalogdan kopya ya da serbest metin) |
 | rank | varchar(10) | CHECK in (`primary`, `secondary`) |
 | verification | varchar(15) | CHECK in (`provisional` ön tanı, `confirmed` kesin tanı) |
@@ -397,10 +415,11 @@ FHIR: `ImmunizationRecommendation` (`dateCriterion` = `due_on`). Mobilde aşı h
 | id | uuid | PK |
 | patient_id | uuid | → patients |
 | encounter_id | uuid null | → encounters (muayenede ölçüldüyse) |
-| type_code | varchar(30) | → observation_types |
+| type_code | varchar(30) null | → observation_types. Dosyadan gelen ölçüm, LOINC koduyla türe eşlenir; eşlenemezse null |
+| coding | jsonb | Ham kodlama (LOINC). CHECK: `type_code` ya da `coding` dolu olmalı; `source = 'clinic'` ise `type_code` dolu olmalı |
 | value | numeric(10,3) | not null |
 | value2 | numeric(10,3) | Tansiyonda küçük değer |
-| unit | varchar(20) | (türden kopya) |
+| unit | varchar(20) | Türden kopya; eşlenemeyen ölçümde dosyadaki birim (UCUM) |
 | measured_at | timestamptz | not null |
 | source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`) |
@@ -412,7 +431,7 @@ FHIR: `ImmunizationRecommendation` (`dateCriterion` = `due_on`). Mobilde aşı h
 | created_at, updated_at, deleted_at | timestamptz | |
 
 İndeks: `(patient_id, type_code, measured_at desc)`
-FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `component` ile)
+FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `component` ile). Türü eşlenemeyen ölçümler grafiklerde "diğer ölçümler" altında listelenir, normal aralık uyarısı verilmez.
 
 ---
 
@@ -446,6 +465,18 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 | name_en | varchar(300) | İngilizce ad (WHO ICD-10). Dışa aktarımda Türkçe adın yanına eklenir |
 | parent_code | varchar(10) null | → icd10_codes (bölüm, blok, kategori hiyerarşisi) |
 | is_selectable | boolean | Yalnızca alt düzey kodlar teşhis olarak seçilebilir |
+
+İndeks: `gin (name gin_trgm_ops)`
+
+### `atc_codes`: ATC sınıflandırması
+İlaç alerjisinde madde ya da ilaç grubu seçmek için (ör. `J01C` penisilinler). Kaynağın kullanım koşulları F1'de doğrulanır.
+
+| Kolon | Tip | Not |
+|---|---|---|
+| code | varchar(10) | PK, ör. `J01C`, `J01CA04` |
+| name | varchar(300) | Türkçe ad |
+| name_en | varchar(300) | İngilizce ad |
+| level | smallint | 1–5 (ATC düzeyi) |
 
 İndeks: `gin (name gin_trgm_ops)`
 
@@ -497,7 +528,7 @@ Varsayılanlar: kilo, boy, tansiyon, nabız, ateş, kan şekeri, SpO₂. Klinik 
 | id | uuid | PK |
 | patient_id | uuid | → patients |
 | token_hash | char(64) | unique. Token'ın SHA-256'sı; token'ın kendisi saklanmaz |
-| channel | varchar(10) | CHECK in (`internet`, `lan`) |
+| channel | varchar(10) | CHECK in (`internet`). Yerel ağ QR'ı (`lan`) v0.1 sonrasında eklenecek |
 | scope | jsonb | `{"all": true}` ya da `{"encounters": ["<uuid>", ...]}` |
 | expires_at | timestamptz | not null |
 | max_uses | smallint | |
@@ -523,7 +554,16 @@ Geçerlilik: `revoked_at IS NULL AND expires_at > now() AND use_count < max_uses
 | imported_by | uuid | → users |
 | created_at, updated_at | timestamptz | |
 
-Akış: hastanın dosyası yüklenir. Dosyadaki `installation_id` + hasta UUID bu kuruluma aitse hasta otomatik bulunur; değilse durum `awaiting_match` olur ve sekreter hastayı elle eşleştirir. Ardından kayıtlar `pending` olarak oluşturulur ve doktorun onay kuyruğuna düşer.
+Akış ([PLAN.md 4.4](PLAN.md) ile aynı):
+1. Dosya yüklenir. Dosyadaki bilinen bir identifier (bu kurulumun `installation_id` + hasta UUID'si ya da `patient_identifiers` tablosundaki başka Lokman kimliği) hastayı otomatik bulur; bulunamazsa durum `awaiting_match` olur, kullanıcı hastayı elle eşleştirir ya da yeni hasta oluşturur.
+2. Her kayıt kaynağına göre işlenir:
+   - bu kurulumun kendi kaydı → atlanır
+   - `origin_ref` değeri zaten kayıtlı → mevcut satır güncellenir
+   - hasta beyanı → `source = patient_reported`, `verification = pending`, doktorun onay kuyruğuna düşer
+   - başka kurumun kaydı → `source = external`, `verification = verified`, salt okunur; onay kuyruğuna girmez
+3. Sonuç `summary` alanına yazılır.
+
+Sekreter eşleştirme ekranında yalnızca hasta kimlik bilgilerini ve `summary` sayılarını görür; `payload` ve kayıt içerikleri sekretere gösterilmez.
 
 ---
 
@@ -542,13 +582,13 @@ Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. He
 | `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre |
 | `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde kalır, hiçbir dışa aktarıma girmez** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
-| `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları + profilin yaşına göre ulusal takvim önerileri |
+| `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları. (Profilin yaşına göre ulusal takvim önerileri v0.1 sonrasında) |
 | `observations` | Ölçümler (klinikten gelen + hastanın girdiği) |
 | `appointments` | Klinikten gelen gelecek randevular |
 | `allergies`, `conditions` | Alerji ve kronik hastalıklar. `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
 | `fhir_resources` | Her kaynağın ham FHIR JSON'u (`resource_type`, `id`, `profile_id`, `json`, `last_updated`). Kayıpsız dışa aktarım ve ileride yeni alanlar için |
 | `import_history` | Ne zaman, hangi klinikten, kaç kayıt geldi |
-| `app_settings` | Uygulama kurulum kimliği, bildirim tercihleri, Drive yedeği açık/kapalı, son yedek zamanı |
+| `app_settings` | Uygulama kurulum kimliği, bildirim tercihleri, son tam dışa aktarım zamanı (yedek hatırlatması için) |
 
 Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.times_of_day` ile doz bildirimleri, `immunization_due` ile aşı bildirimleri, `appointments` ile randevu bildirimleri.
 
@@ -561,5 +601,9 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 - Muayenede hikaye, bulgular, hastaya giden öneriler (`plan`) ve iç not ayrı alanlar.
 - Protokol numarası yıl + sıra: `2026-000123` (yıl başında sıra sıfırlanır; PostgreSQL sequence + yıl).
 - TCKN ve diğer kimlikler düz saklanır (arama ve algoritma doğrulaması için). Koruma veritabanı/disk düzeyinde şifreleme, rol bazlı erişim ve erişim logu ile sağlanır.
-- Başka kurumdan gelen kayıtlar aynı tablolara `source = external` ile eklenir.
+- Başka kurumdan gelen kayıtlar aynı tablolara `source = external` ile eklenir; onay kuyruğuna girmez. Yalnızca hasta beyanı onay bekler.
+- Dosyadan gelen her kayıtta `origin_ref` tutulur ve tekildir; tekrar aktarım kayıt çoğaltmaz (alerji ve kronik hastalık dahil).
+- Katalogda olmayan kodlar reddedilmez; ham kodlama `coding` kolonunda saklanır, katalog FK'si boş kalır.
+- İlaç alerjisi ATC kodu / etken maddeyle kodlanır; ilaç–alerji uyarısı ATC öneki ve etken madde eşleşmesiyle çalışır.
+- Sekreter klinik içeriği göremez ve dışa aktaramaz; içe aktarımda yalnızca hasta eşleştirmesi yapar.
 - Planlanan aşılar ayrı tabloda (`planned_immunizations`).
