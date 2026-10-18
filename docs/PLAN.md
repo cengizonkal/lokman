@@ -39,6 +39,8 @@ flowchart LR
 | Kurulum | Tek klinik, self-hosted, Docker Compose |
 | Mobil | Flutter, ilk hedef **Android APK** |
 | Lisans | MIT |
+| Hedef ülkeler | Türkiye ve KKTC |
+| Resmî sistemler | e-Nabız / e-Reçete entegrasyonu **zorunlu değil** ve v0.1'de yok (KKTC'de de kullanılacağı için ürün bunlara bağlı tasarlanmaz) |
 | Kod dili | Kod tanımlayıcıları İngilizce (Laravel/Flutter gelenekleri), arayüz Türkçe |
 
 ### 1.2 Kullanıcılar ve roller
@@ -85,6 +87,7 @@ flowchart LR
 | Birden çok klinik | Farklı kliniklerden gelen veriler aynı profilde birleşir |
 | Bildirimler | Cihazda zamanlanır: ilaç doz saatleri, planlanan aşılar, randevular |
 | Aşı takvimi | v0.1'de mobil yalnızca klinikten gelen planlanan aşıları gösterir; ulusal takvim önerileri sonra |
+| Şifreleme | Uygulama içinde ek şifreleme ya da uygulama kilidi yok. Veri, telefonun kendi ekran kilidi ve Android'in uygulama alanı korumasıyla korunur |
 | Yedek | v0.1'de yok. Kullanıcı tüm veriyi FHIR dosyası olarak dışa aktarıp saklayabilir; Google Drive yedeği sonra |
 
 ---
@@ -221,7 +224,7 @@ Lokman dışı kurum IPS uyumlu dosyayı FHIR ile okur; FHIR kullanmayan kurum P
 - **Rıza:** KVKK aydınlatma, açık rıza ve mobil paylaşım rızası kaydı (`consents`). Geçerli paylaşım rızası yoksa QR/dosya üretilmez.
 - **Aktarım:** QR her zaman TLS ile ve gerçek sertifikayla (alan adı). Süre ve kullanım sınırlı; uzun süre ayarında uyarı.
 - **Düz JSON riski:** dosya şifrelenmez; paylaşım öncesi uyarı ve erişim logu. Şifreli paket ileride eklenebilir.
-- **Depolama:** klinikte veritabanı/disk şifrelemesi ve yedekleme önerileri kurulum dokümanında. Mobilde veri uygulama alanında.
+- **Depolama:** klinikte veritabanı/disk şifrelemesi ve yedekleme önerileri kurulum dokümanında. Mobilde veri uygulama alanında, uygulama içi şifreleme yok (telefonun ekran kilidine dayanılır).
 - **Yetki:** rol + kayıt düzeyi Policy. Sekreter klinik içeriği (bkz. 2.2) göremez ve dışa aktaramaz; içe aktarımda paket içeriği sekretere gösterilmez.
 - **Erişim logu:** görüntüleme, değişiklik, silme, dışa aktarma, paylaşım, indirme, içe aktarma, giriş denemeleri. Log tablosu değiştirilemez.
 
@@ -300,7 +303,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 
 ### Sonra
 - v0.1'den ertelenenler: **yerel ağ QR'ı** (kendinden imzalı sertifika, parmak izi doğrulaması, IP seçimi), **Google Drive yedeği / geri yükleme**, **mobilde ulusal aşı takvimi önerileri**
-- e-Nabız / e-Reçete dönüştürücü katmanı, iOS, şifreli paket, randevu için SMS/e-posta hatırlatma, çoklu rol
+- İsteğe bağlı e-Nabız / e-Reçete dönüştürücü katmanı (yalnızca Türkiye'deki kurulumlar için), iOS, şifreli paket, randevu için SMS/e-posta hatırlatma, çoklu rol
 
 ---
 
@@ -328,4 +331,3 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 ## 10. Açık konular
 - [ ] Randevu için hastaya SMS / e-posta hatırlatma (şimdilik "Sonra")
 - [ ] Ödeme / fatura modülü (şimdilik kapsam dışı)
-- [ ] e-Nabız ve e-Reçete entegrasyonunun kapsamı ve zamanı (güncel format Sağlık Bakanlığı dokümanlarından doğrulanacak)
