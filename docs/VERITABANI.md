@@ -58,7 +58,6 @@ erDiagram
     medications ||--o{ prescription_items : "katalog"
     icd10_codes ||--o{ diagnoses : "hastalık"
     icd10_codes ||--o{ patient_conditions : ""
-    atc_codes ||--o{ patient_allergies : "ilaç alerjisi"
     vaccines ||--o{ immunizations : "katalog"
     vaccines ||--o{ planned_immunizations : "katalog"
     planned_immunizations |o--o| immunizations : "yapılınca bağlanır"
@@ -180,7 +179,7 @@ FHIR: `Patient.identifier[]` dizisine eklenir. Bu kurulumun kendi kimliği (`ins
 | patient_id | uuid | → patients |
 | substance | varchar(200) | not null, ör. "Penisilin" (görünen ad) |
 | category | varchar(20) | CHECK in (`medication`, `food`, `environment`, `other`) |
-| atc_code | varchar(10) null | → atc_codes. İlaç alerjisinde ATC kodu ya da grubu, ör. `J01C` (penisilinler) ya da `J01CA04` (amoksisilin) |
+| atc_code | varchar(10) null | İlaç alerjisinde ATC kodu ya da grubu, ör. `J01C` (penisilinler) ya da `J01CA04` (amoksisilin). Panelde `atc_codes` listesinden seçilir; FK değildir, çünkü dosyadan gelen kod listede olmayabilir |
 | active_ingredient | varchar(300) null | İlaç alerjisinde etken madde (`medications.active_ingredient` ile aynı yazım) |
 | coding | jsonb | Dosyadan gelen ham kodlama (bkz. genel kurallar) |
 | reaction | varchar(300) | ör. "ürtiker" |
@@ -445,7 +444,7 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 | name | varchar(300) | not null |
 | active_ingredient | varchar(300) | |
 | active_ingredient_en | varchar(300) | Uluslararası ad (INN). Dışa aktarımda eklenir |
-| atc_code | varchar(10) | |
+| atc_code | varchar(10) | TİTCK listesinden (5. düzey). İlaç–alerji uyarısı bu koda dayanır |
 | form | varchar(50) | tablet, şurup… |
 | strength | varchar(100) | |
 | manufacturer | varchar(200) | |
@@ -468,17 +467,30 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 
 İndeks: `gin (name gin_trgm_ops)`
 
-### `atc_codes`: ATC sınıflandırması
-İlaç alerjisinde madde ya da ilaç grubu seçmek için (ör. `J01C` penisilinler). Kaynağın kullanım koşulları F1'de doğrulanır.
+### `atc_codes`: alerji için ATC seçim listesi
+İlaç alerjisi girerken madde ya da ilaç grubu seçmek için kullanılır (ör. `J01C` penisilinler). **Tam ATC sınıflandırması değildir.**
+
+WHO'nun ATC/DDD Index'i depoya konmaz ve kurulumla dağıtılmaz. Index'in tam listesi ücretli satılıyor, kullanım koşulları da (bilinen hâliyle; resmi metin F1'de teyit edilir) ticari amaçlı dağıtımı ve içeriği değiştirmeyi kısıtlıyor; MIT lisanslı Lokman'ı başkaları ticari olarak kurabileceği için bu liste kullanılmaz. Uyarı için tam listeye gerek yok: ilaçların 5. düzey ATC kodu TİTCK listesinden gelir, grup koddan türetilir (`J01CA04` → ilk 4 karakter `J01C`), grup adlarını proje kendi yazar.
+
+Satırlar üç kaynaktan gelir:
+
+| `source` | Ne | Nasıl |
+|---|---|---|
+| `lokman` | Alerjide sık geçen ilaç grupları, 20–40 satır: penisilinler, sefalosporinler, karbapenemler, sülfonamidler, makrolidler, kinolonlar, tetrasiklinler, NSAİİ'ler, opioidler, iyotlu kontrast maddeler, lokal anestezikler, antiepileptikler… | Proje ekibinin yazdığı Türkçe ve İngilizce adlarla seed dosyası (`backend/database/seeders/data/atc_allergy_groups.php`). Her satırda yalnızca kod ve kendi yazdığımız ad bulunur |
+| `titck` | Etken maddeler (5. düzey kodlar) | TİTCK ilaç listesi içe aktarılırken `medications` tablosundaki farklı (`atc_code`, `active_ingredient`, `active_ingredient_en`) üçlülerinden üretilir. Ad TİTCK listesindeki etken madde adıdır |
+| `manual` | Klinik eklemesi | Panelden (yönetici) |
 
 | Kolon | Tip | Not |
 |---|---|---|
-| code | varchar(10) | PK, ör. `J01C`, `J01CA04` |
-| name | varchar(300) | Türkçe ad |
-| name_en | varchar(300) | İngilizce ad |
-| level | smallint | 1–5 (ATC düzeyi) |
+| code | varchar(10) | PK, ör. `J01C`, `J01CA04`. CHECK: ATC biçimi (`^[A-Z]([0-9]{2}([A-Z]([A-Z]([0-9]{2})?)?)?)?$`) |
+| name | varchar(300) | not null. Türkçe ad |
+| name_en | varchar(300) | İngilizce ad (dışa aktarımda `display`) |
+| level | smallint | 1–5. Koddan hesaplanır (uzunluk 1, 3, 4, 5, 7) |
+| source | varchar(10) | CHECK in (`lokman`, `titck`, `manual`) |
+| is_active | boolean | |
 
 İndeks: `gin (name gin_trgm_ops)`
+TİTCK içe aktarımı `lokman` ve `manual` satırlarının üzerine yazmaz.
 
 ### `vaccines`: aşı katalogu
 | Kolon | Tip | Not |
@@ -605,5 +617,6 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 - Dosyadan gelen her kayıtta `origin_ref` tutulur ve tekildir; tekrar aktarım kayıt çoğaltmaz (alerji ve kronik hastalık dahil).
 - Katalogda olmayan kodlar reddedilmez; ham kodlama `coding` kolonunda saklanır, katalog FK'si boş kalır.
 - İlaç alerjisi ATC kodu / etken maddeyle kodlanır; ilaç–alerji uyarısı ATC öneki ve etken madde eşleşmesiyle çalışır.
+- WHO ATC/DDD Index dağıtılmaz. `atc_codes` yalnızca projenin yazdığı alerji grupları ile TİTCK listesinden türetilen etken maddeleri içerir.
 - Sekreter klinik içeriği göremez ve dışa aktaramaz; içe aktarımda yalnızca hasta eşleştirmesi yapar.
 - Planlanan aşılar ayrı tabloda (`planned_immunizations`).

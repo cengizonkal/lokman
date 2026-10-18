@@ -104,7 +104,7 @@ flowchart LR
 | Onay kuyruğu | Hasta beyanı aşı, alerji, kronik hastalık ve ölçümleri onayla/reddet |
 | Paylaşım | QR (internet), FHIR dosyası ve PDF özet indirme, aktif bağlantıları iptal |
 | İçe aktarım | FHIR dosyası yükleme, hasta eşleştirme (otomatik ya da elle / yeni hasta), içe aktarım geçmişi. Sekreter yalnızca kimlik bilgilerini ve kayıt sayılarını görür, paket içeriğini göremez |
-| Kataloglar | İlaç (TİTCK), ICD-10, ATC, aşı ve aşı takvimi, ölçüm türleri |
+| Kataloglar | İlaç (TİTCK), ICD-10, ATC alerji grupları (proje yazar; WHO listesi dağıtılmaz), aşı ve aşı takvimi, ölçüm türleri |
 | Yönetim | Kullanıcılar, roller, klinik ayarları (QR süresi, alan adı), erişim logu |
 
 ### 2.2 Rol–yetki matrisi
@@ -258,7 +258,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 - [ ] Migration'lar (VERITABANI.md'ye göre), seed: roller, ölçüm türleri, aşılar, aşı takvimi
 - [ ] Kullanıcılar ve roller, Policy'ler, erişim logu
 - [ ] Hasta kaydı: kimlikler (TCKN doğrulama), alerjiler, kronik hastalıklar, rızalar, Türkçe karakterli arama
-- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı, ICD-10 ve ATC yükleme
+- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı (ATC sütunu ve etken maddeler dahil), ICD-10 yükleme, ATC alerji grupları seed'i
 - [ ] Randevu takvimi (doktor kendi, sekreter tümü), çakışma kısıtı
 - [ ] Muayene, teşhis (ön/kesin), reçete (saatler, süre, tür, kutu), ilaç–alerji uyarısı (etken madde / ATC öneki eşleşmesi; kodsuz alerjide genel uyarı)
 
@@ -317,6 +317,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 |---|---|
 | IPS profilinin ayrıntıları (zorunlu alanlar, kod sistemleri) beklenenden katı | F0'da örnek paketleri validator'dan geçirerek sözleşmeyi erken sabitlemek |
 | TİTCK ve ICD-10 Türkçe listelerinin biçimi değişebilir / lisans koşulları | İçe aktarıcıyı esnek sütun eşlemeli yazmak; kaynak ve kullanım koşullarını F1'de doğrulamak |
+| WHO ATC/DDD Index'in kullanım koşulları ticari dağıtımı ve değiştirmeyi kısıtlıyor | Tam liste kullanılmaz; ilaç ATC kodları TİTCK listesinden, alerji grup adları projenin kendi seed'inden. TİTCK listesinde ATC sütunu olduğu F1'de doğrulanır; yoksa uyarı etken madde eşleşmesiyle çalışır ve ATC kodu elle girilir |
 | Android bildirim kısıtlamaları (pil optimizasyonu, tam zamanlı alarm izni) | İzin akışını açık anlatmak, gerçek cihazlarda test |
 | Düz JSON dosyanın yanlış kişiye gitmesi | Paylaşım uyarısı, erişim logu; şifreli paket "Sonra" listesinde |
 | Alan adı olmayan klinikte QR yok | v0.1'de dosya ile aktarım; yerel ağ QR'ı "Sonra" listesinde |
