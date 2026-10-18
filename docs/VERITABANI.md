@@ -18,6 +18,7 @@ Bu belge iki veritabanını kapsar:
 | Durum alanları | PostgreSQL `enum` tipi yerine `varchar + CHECK`. Yeni değer eklemek migration ile kolay olur |
 | Silme | Klinik kayıtlar **yumuşak silinir** (`deleted_at`). Tıbbi kayıt fiziksel olarak silinmez; silme işlemi erişim loguna yazılır |
 | Kim yaptı | Klinik tablolarında `created_by` / `updated_by` (→ `users.id`) |
+| Dış kaynaklı kayıt | Başka kurumdan (başka Lokman kliniği, hastane, yurt dışı) gelen muayene, teşhis, reçete, aşı ve ölçümler **aynı tablolara** `source = external` ile yazılır, panelde salt okunur ve kurum adı etiketiyle gösterilir. Ortak kolonlar: `origin_name` (kurum adı), `origin_practitioner` (dış hekim adı), `origin_ref` (kaynak sistemdeki FHIR kimliği, `system|value`; aynı dosya tekrar gelirse mükerrer kayıt oluşmaz), `import_id` |
 | Anlık kopya | Katalogdan seçilen ilaç, aşı ve tanının adı ve kodu kayda **kopyalanır**. Katalog sonradan değişse de eski reçete aynı kalır |
 | Eklentiler | `pg_trgm` (Türkçe ad aramasında benzerlik), `btree_gist` (randevu çakışma kısıtı) |
 | Adlandırma | Tablo ve kolon adları İngilizce, `snake_case`, tablo adları çoğul (Laravel geleneği). Türkçe karşılıkları aşağıda |
@@ -255,8 +256,11 @@ FHIR: `Appointment` (yalnızca gelecek randevular paylaşılır)
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients |
-| doctor_id | uuid | → users |
+| doctor_id | uuid null | → users. CHECK: `source = 'clinic'` ise dolu olmalı |
 | appointment_id | uuid null | → appointments, unique (bir randevudan tek muayene) |
+| source | varchar(10) | CHECK in (`clinic`, `external`), default `clinic` |
+| origin_name, origin_practitioner, origin_ref | varchar | Dış kaynaklı kayıtlar için (bkz. genel kurallar). `unique(origin_ref)` |
+| import_id | uuid null | → imports |
 | started_at | timestamptz | not null |
 | ended_at | timestamptz | |
 | complaint | text | Şikayet |
@@ -268,7 +272,7 @@ FHIR: `Appointment` (yalnızca gelecek randevular paylaşılır)
 | created_by, updated_by, timestamps, deleted_at | | |
 
 İndeks: `(patient_id, started_at desc)`, `(doctor_id, started_at desc)`
-FHIR: `Encounter`. Şikayet `reasonCode`, bulgular ve plan extension olarak taşınır. `internal_note` dışa aktarılmaz.
+FHIR: `Encounter`. Şikayet `reasonCode`, bulgular ve plan extension olarak taşınır. `internal_note` dışa aktarılmaz. Dış kaynaklı muayenenin teşhisleri (`diagnoses`) muayeneyle birlikte dış kaynaklı sayılır.
 
 ### `diagnoses`: teşhis
 | Kolon | Tip | Kısıt / Not |
@@ -290,7 +294,10 @@ FHIR: `Condition` (category = `encounter-diagnosis`, `verificationStatus`)
 | id | uuid | PK |
 | patient_id | uuid | → patients |
 | encounter_id | uuid null | → encounters |
-| doctor_id | uuid | → users |
+| doctor_id | uuid null | → users. CHECK: `source = 'clinic'` ise dolu olmalı |
+| source | varchar(10) | CHECK in (`clinic`, `external`), default `clinic` |
+| origin_name, origin_practitioner, origin_ref | varchar | Dış kaynaklı reçete için |
+| import_id | uuid null | → imports |
 | issued_at | timestamptz | not null |
 | type | varchar(10) | CHECK in (`normal`, `red`, `green`, `purple`, `orange`): reçete türü (normal / kırmızı / yeşil / mor / turuncu) |
 | erecete_no | varchar(30) | e-Reçete numarası (varsa, elle girilir) |
@@ -339,7 +346,8 @@ Muayeneden ayrı bir tablodur, muayene bağlantısı opsiyoneldir (ilk dokümand
 | expiration_date | date | Aşının son kullanma tarihi |
 | site | varchar(30) | Uygulama bölgesi, ör. sol deltoid |
 | performer_id | uuid null | → users (klinikte yapıldıysa) |
-| performer_name | varchar(150) | Dışarıda yapıldıysa yapan kurum veya kişi |
+| performer_name | varchar(150) | Dışarıda yapıldıysa yapan kişi |
+| origin_name, origin_ref | varchar | Dış kaynaklı aşı için kurum adı ve kaynak kimlik |
 | source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`). Klinikte yapılan aşı `verified` olarak doğar |
 | verified_by | uuid null | → users |
@@ -398,6 +406,7 @@ FHIR: `ImmunizationRecommendation` (`dateCriterion` = `due_on`). Mobilde aşı h
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`) |
 | verified_by, verified_at | | |
 | import_id | uuid null | → imports |
+| origin_name, origin_ref | varchar | Dış kaynaklı ölçüm için |
 | note | varchar(300) | |
 | recorded_by | uuid null | → users |
 | created_at, updated_at, deleted_at | timestamptz | |
@@ -416,6 +425,7 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 | barcode | varchar(20) | unique (null hariç). TİTCK listesinde eşleştirme anahtarı |
 | name | varchar(300) | not null |
 | active_ingredient | varchar(300) | |
+| active_ingredient_en | varchar(300) | Uluslararası ad (INN). Dışa aktarımda eklenir |
 | atc_code | varchar(10) | |
 | form | varchar(50) | tablet, şurup… |
 | strength | varchar(100) | |
@@ -433,6 +443,7 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 |---|---|---|
 | code | varchar(10) | PK, ör. `J03.9` |
 | name | varchar(300) | Türkçe ad |
+| name_en | varchar(300) | İngilizce ad (WHO ICD-10). Dışa aktarımda Türkçe adın yanına eklenir |
 | parent_code | varchar(10) null | → icd10_codes (bölüm, blok, kategori hiyerarşisi) |
 | is_selectable | boolean | Yalnızca alt düzey kodlar teşhis olarak seçilebilir |
 
@@ -444,6 +455,7 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 | id | uuid | PK |
 | code | varchar(30) | unique, ör. `HEPB`, `KKK` |
 | name | varchar(200) | |
+| name_en | varchar(200) | İngilizce ad |
 | atc_code | varchar(10) | |
 | description | text | |
 | is_active | boolean | |
@@ -469,6 +481,7 @@ Varsayılanlar: kilo, boy, tansiyon, nabız, ateş, kan şekeri, SpO₂. Klinik 
 |---|---|---|
 | code | varchar(30) | PK, ör. `blood_pressure` |
 | name | varchar(100) | "Tansiyon" |
+| name_en | varchar(100) | "Blood pressure" |
 | unit | varchar(20) | "mmHg" |
 | ucum | varchar(20) | "mm[Hg]" |
 | loinc | varchar(20) | "85354-9" |
@@ -500,7 +513,7 @@ Geçerlilik: `revoked_at IS NULL AND expires_at > now() AND use_count < max_uses
 | Kolon | Tip | Not |
 |---|---|---|
 | id | uuid | PK |
-| type | varchar(20) | CHECK in (`fhir_bundle`, `titck_medications`, `icd10`, `patients_csv`) |
+| type | varchar(20) | CHECK in (`fhir_bundle`, `fhir_ips`, `titck_medications`, `icd10`, `patients_csv`) |
 | file_name | varchar(255) | |
 | file_sha256 | char(64) | Aynı dosya tekrar yüklenirse uyarı verilir |
 | status | varchar(20) | CHECK in (`awaiting_match` hasta eşleşmesi bekliyor, `completed`, `partial`, `failed`) |
@@ -547,5 +560,4 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 - [ ] Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulsun mu?
 - [ ] Muayenede "hikaye/anamnez" ve hastaya giden "öneriler/plan" alanları ayrı olsun mu?
 - [ ] Protokol numarası biçimi (`2026-000123` ya da sıralı sayı)
-- [ ] Başka kurumdan gelen muayene/reçete/teşhis kayıtlarının saklanma biçimi (bkz. PLAN.md, Açık konular)
 - [ ] TCKN gibi kimlikler veritabanında düz mü saklansın, yoksa şifreli + arama için hash mi? Şifreleme TCKN ile hasta aramayı zorlaştırır

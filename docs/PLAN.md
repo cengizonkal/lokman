@@ -40,7 +40,10 @@ flowchart LR
 | Aktarım yolu (telefon → klinik) | Yalnızca **dosya** (FHIR JSON). Gelen kayıtlar onay kuyruğuna düşer |
 | İlaç katalogu | **TİTCK ilaç listesi** (Excel) panelden içe aktarılır ve güncellenir |
 | Lisans | **MIT** |
-| Veri formatı | **HL7 FHIR R4**, düz JSON (şifrelenmemiş) |
+| Veri formatı | **HL7 FHIR R4**, düz JSON (şifrelenmemiş). Dışa aktarım **HL7 International Patient Summary (IPS)** profiline uyar |
+| Okunabilir özet | Her dışa aktarımla birlikte yazdırılabilir **PDF özet** üretilir (FHIR okuyamayan kurumlar için). Hem panel hem mobil üretir |
+| Dil | Serbest metin (şikayet, bulgu, not) Türkçe kalır. Kodlu alanlarda (teşhis, aşı, ilaç etken maddesi, ölçüm türü) **Türkçe + İngilizce** ad birlikte yazılır |
+| Dış kaynaklı kayıtlar | Başka kurumdan gelen muayene, teşhis, reçete, aşı ve ölçüm klinikte **aynı tablolara** `source = external` ile kurum adı etiketiyle ve salt okunur olarak eklenir |
 | Kimlik | **TCKN temelli değil.** Birincil anahtar UUID. TCKN, pasaport gibi kimlikler opsiyonel ek bilgidir |
 | Mobil profiller | **Aile profilleri**: tek uygulamada birden fazla kişi (ör. anne ve çocukları) |
 | Mobil yedek | **İsteğe bağlı Google Drive yedeği** |
@@ -152,6 +155,10 @@ medications, icd10_codes, vaccines, vaccine_schedule_templates                  
 
 İki ürünün konuştuğu tek dil budur. Ayrıntıları `docs/fhir-sozlesmesi.md` dosyasında olacak. `fhir/examples/` altındaki örnek paketleri iki tarafın testleri de kullanacak.
 
+**IPS uyumu:** dışa aktarılan paket `Bundle.type = document` olup ilk kaynağı bir `Composition`'dır. Bu belge IPS'in zorunlu bölümlerini (aktif problemler, alerjiler, ilaçlar) ve ilgili bölümleri (aşılar, vital bulgular, plan) içerir. Lokman'a özgü kayıtlar (muayeneler, randevular, planlanan aşılar) ek bölümler olarak aynı pakete girer. Lokman dışı bir sistem bunları yok sayabilir; Lokman ise kayıpsız okur. Üretilen paketler CI'da HL7 FHIR Validator ile IPS profiline karşı doğrulanır.
+
+**PDF özet:** paketle aynı içerikten, başlıkları Türkçe/İngilizce iki dilli, yazdırılabilir bir özet. Mobilde Dart `pdf` paketiyle, panelde Laravel tarafında üretilir.
+
 ### 4.1 Kaynak eşleşmesi
 | Lokman | FHIR R4 kaynağı |
 |---|---|
@@ -200,10 +207,10 @@ Dışa aktarım yalnızca kendi kliniğe dönüş için değildir. Ayşe verisin
 |---|---|
 | Bu kliniğin kendi ürettiği kayıt (aynı `installation_id`) | Zaten var; atlanır |
 | Hastanın kendi girdiği kayıt | Onay kuyruğuna düşer (`patient_reported`, `pending`). Doktor onaylar ya da reddeder |
-| Başka bir kurumun kaydı (başka klinik, hastane) | **Dış kaynaklı kayıt** olarak alınır. Saklama biçimi henüz kararlaştırılmadı (bkz. Açık konular) |
+| Başka bir kurumun kaydı (başka klinik, hastane) | **Dış kaynaklı kayıt** olarak aynı tablolara alınır (`source = external`, kurum adıyla). Panelde salt okunur, hasta geçmişinde "X Hastanesi" etiketiyle görünür. Aynı kayıt tekrar gelirse kaynak kimliğinden tanınır, çoğalmaz |
 | Hasta bu klinikte hiç kayıtlı değil | Panel "yeni hasta olarak oluştur" ya da "mevcut hastayla eşleştir" seçeneği sunar |
 
-- **Lokman dışı kurum:** dosya standart HL7 FHIR R4 olduğu için FHIR destekleyen sistemler doğrudan okuyabilir. Kodlar uluslararası sistemlerden gelir: ICD-10, ATC, LOINC, UCUM.
+- **Lokman dışı kurum:** dosya IPS uyumlu HL7 FHIR R4 olduğu için FHIR destekleyen sistemler doğrudan okuyabilir. Kodlar uluslararası sistemlerden gelir: ICD-10, ATC, LOINC, UCUM. FHIR okuyamayan kurum (ör. yurt dışında bir muayenehane) iki dilli PDF özeti kullanır.
 
 ---
 
@@ -238,17 +245,14 @@ lokman/
 | **F0: Temel** | Depo, Docker Compose, Laravel + Filament iskeleti, Flutter iskeleti, CI (Pest, `flutter test`, FHIR validator), FHIR sözleşmesi ve örnek paketler | Çalışan boş panel + boş APK |
 | **F1: Klinik çekirdek** | Kullanıcılar/roller, hasta kaydı, doktor randevuları, muayene → teşhis (ICD-10), reçete (ilaç katalogu, doz saatleri), erişim logu | Randevu, muayene ve reçete yazılabilen panel |
 | **F2: Aşı ve ölçüm** | Aşı kaydı, sonraki doz, ulusal aşı takvimi, ölçümler, hasta beyanı onay kuyruğu | |
-| **F3: Klinik aktarım** | FHIR dışa aktarım, QR süreli bağlantı, dosya indirme, FHIR içe aktarım ve onay akışı | Panelden QR/dosya üretimi |
-| **F4: Mobil MVP** | Aile profilleri, QR/dosya ile içe aktarma, muayene geçmişi, ilaçlar ve doz hatırlatma, aşı takvimi ve hatırlatma, randevu hatırlatma, ölçüm girişi ve grafik, dışa aktarma | **İlk Android APK** |
+| **F3: Klinik aktarım** | IPS uyumlu FHIR dışa aktarım + PDF özet, QR süreli bağlantı, dosya indirme, FHIR içe aktarım (dış kaynaklı kayıtlar dahil) ve onay akışı | Panelden QR/dosya üretimi |
+| **F4: Mobil MVP** | Aile profilleri, QR/dosya ile içe aktarma, muayene geçmişi, ilaçlar ve doz hatırlatma, aşı takvimi ve hatırlatma, randevu hatırlatma, ölçüm girişi ve grafik, IPS uyumlu dışa aktarma + PDF özet | **İlk Android APK** |
 | **F5: Yayın** | Drive yedeği, KVKK ekranları, APK imzalama, kurulum dokümanı, demo verisi | v0.1 sürümü |
 | Sonra | e-Nabız / e-Reçete dönüştürücü katmanı, iOS, şifreli paket | |
 
 ---
 
 ## 8. Açık konular
-- [ ] Başka kurumdan gelen kayıtlar (muayene, reçete…) klinikte nasıl saklansın?
-- [ ] Yurt dışı paylaşım için HL7 **International Patient Summary (IPS)** profiline uyum ve dosyayla birlikte okunabilir bir PDF özet üretilsin mi?
-- [ ] Dışa aktarılan dosyada Türkçe metinlerin yanında İngilizce karşılıklar (ör. teşhis ve aşı adları) olsun mu?
 - [ ] Randevu: süre/slot ayarı (ör. 15–20 dk), çakışma kontrolü, hastaya SMS/e-posta hatırlatma olacak mı?
 - [ ] Ödeme / fatura modülü (şimdilik kapsam dışı)
 - [ ] e-Nabız ve e-Reçete entegrasyonunun kapsamı ve zamanı. Güncel format Sağlık Bakanlığı dokümanlarından doğrulanacak
