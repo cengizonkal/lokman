@@ -18,7 +18,7 @@ flowchart LR
   subgraph Telefon["Mobil uygulama (Android)"]
     A[Flutter] --> S[(Yerel SQLite)]
   end
-  L -- "QR: süreli bağlantı (alan adı varsa)<br/>ya da FHIR JSON dosyası" --> A
+  L -- "QR: süreli bağlantı (alan adı ya da yerel ağ)<br/>veya FHIR JSON dosyası" --> A
   A -- "FHIR JSON dosyası<br/>(hasta beyanı: aşı, ölçüm)" --> L
   A -. "isteğe bağlı yedek" .-> G[(Hastanın Google Drive'ı)]
 ```
@@ -36,7 +36,10 @@ flowchart LR
 | Kullanıcılar | Çok kullanıcılı: personel aynı sisteme **e-posta + şifre** ile girer, rol bazlı yetki uygulanır |
 | Mobil | Flutter, ilk hedef **Android APK** |
 | Mobil ↔ klinik | Doğrudan bağlantı yok, hasta hesabı yok. Yalnızca FHIR dışa ve içe aktarımı |
-| Aktarım yolu | Klinik alan adına sahipse **QR kod**, içinde süreli indirme bağlantısı bulunur. Alan adı yoksa **dosya** ile |
+| Aktarım yolu (klinik → telefon) | Alan adı varsa **QR** (süreli HTTPS bağlantısı). Alan adı yoksa **yerel ağ QR'ı** (telefon kliniğin Wi-Fi'ında) ya da **dosya** |
+| Aktarım yolu (telefon → klinik) | Yalnızca **dosya** (FHIR JSON). Gelen kayıtlar onay kuyruğuna düşer |
+| İlaç katalogu | **TİTCK ilaç listesi** (Excel) panelden içe aktarılır ve güncellenir |
+| Lisans | **MIT** |
 | Veri formatı | **HL7 FHIR R4**, düz JSON (şifrelenmemiş) |
 | Kimlik | **TCKN temelli değil.** Birincil anahtar UUID. TCKN, pasaport gibi kimlikler opsiyonel ek bilgidir |
 | Mobil profiller | **Aile profilleri**: tek uygulamada birden fazla kişi (ör. anne ve çocukları) |
@@ -63,7 +66,7 @@ flowchart LR
 | Sağlık ölçümleri | Tansiyon, şeker, kilo, boy, nabız, ateş, SpO₂. Normal aralık uyarısı |
 | Paylaşım | Hasta için QR (süreli bağlantı) ya da FHIR dosyası üretme, hastadan gelen dosyayı içe aktarma |
 | Randevu | Doktor kendi takvimini yönetir: randevu ekler, taşır, iptal eder, "geldi/gelmedi" işaretler. Randevudan tek tıkla muayene açılır. Hastanın gelecek randevuları paylaşım paketine eklenir |
-| Kataloglar | İlaç, ICD-10, aşı. Excel/CSV ile toplu yükleme |
+| Kataloglar | İlaç (TİTCK listesinden içe aktarım ve güncelleme: ad, barkod, etken madde, ATC), ICD-10, aşı. Excel/CSV ile toplu yükleme |
 | Yönetim | Kullanıcılar, roller, klinik ayarları, erişim logu |
 
 ### 2.2 Roller
@@ -170,7 +173,13 @@ medications, icd10_codes, vaccines, vaccine_schedule_templates                  
 3. QR içeriği: `https://<alan-adi>/fhir/share/<token>`
 4. Uygulama QR'ı okur, bağlantıdan FHIR Bundle'ı **yalnızca HTTPS** ile indirir. Süresi dolmuş ya da kullanım hakkı bitmiş bağlantı `410 Gone` döner. Her indirme erişim loguna yazılır. Panelden bağlantı erken iptal edilebilir.
 
-**B. Dosya (alan adı yoksa ya da tercih edilirse)**
+**B. Yerel ağ QR'ı (alan adı yok, telefon kliniğin Wi-Fi'ında)**
+- Sunucu ilk kurulumda kendinden imzalı bir TLS sertifikası üretir ve yerel ağda (ör. `https://192.168.1.10:8443`) dinler.
+- QR içeriği: `lokman://import?u=https://192.168.1.10:8443/fhir/share/<token>&fp=<sertifika SHA-256 parmak izi>`
+- Uygulama yalnızca QR'daki parmak iziyle eşleşen sertifikayı kabul eder (certificate pinning). Böylece sertifika otoritesi olmadan da trafik şifreli olur ve araya girme engellenir.
+- Token, süre ve kullanım sınırı A seçeneğiyle aynıdır. Sunucunun yerel IP'si panel ayarlarından seçilir ya da otomatik algılanır.
+
+**C. Dosya (her durumda kullanılabilir)**
 - Panel `.json` FHIR paketini indirir. Hasta dosyayı e-posta, WhatsApp, USB ile alır ve uygulamada açar.
 
 ### 4.4 Telefon → klinik
@@ -183,7 +192,7 @@ medications, icd10_codes, vaccines, vaccine_schedule_templates                  
 
 Sağlık verisi KVKK kapsamında **özel nitelikli kişisel veridir**.
 - **Açık rıza ve aydınlatma:** klinikte rıza kaydı tutulur (`consents`). QR ya da dosya paylaşımından önce rıza kontrol edilir.
-- **Aktarım:** QR bağlantısı yalnızca HTTPS ile çalışır, süresi ve kullanım sayısı sınırlıdır. Yönetici süreyi uzatırsa (ör. yazdırılıp verilen QR) risk artar; ayar ekranında uyarı gösterilir.
+- **Aktarım:** QR bağlantısı her zaman TLS ile çalışır: alan adında gerçek sertifika, yerel ağda parmak izi doğrulamalı kendinden imzalı sertifika kullanılır. Süresi ve kullanım sayısı sınırlıdır. Yönetici süreyi uzatırsa (ör. yazdırılıp verilen QR) risk artar; ayar ekranında uyarı gösterilir.
 - **Düz JSON dosya riski:** dosya şifrelenmediği için yanlış kişiye giderse okunabilir. Panelde paylaşım öncesi uyarı gösterilir ve indirme erişim loguna yazılır. Şifreli paket ileride eklenebilir.
 - **Depolama:** klinikte PostgreSQL ve yedekler kurumun sorumluluğundadır (kurulum dokümanında öneriler yer alacak). Mobilde veri Android uygulama alanında durur. Drive yedeği kullanıcının kendi hesabına gider.
 - **Yetkilendirme:** rol bazlı (Laravel Policy). Mobilde kullanıcı yoktur.
@@ -219,9 +228,5 @@ lokman/
 
 ## 8. Açık konular
 - [ ] Randevu: süre/slot ayarı (ör. 15–20 dk), çakışma kontrolü, hastaya SMS/e-posta hatırlatma olacak mı?
-- [ ] Alan adı olmadan aynı Wi-Fi ağında QR (yerel IP) desteklensin mi?
-- [ ] Telefon → klinik yönünde de QR (klinik ekranında yükleme QR'ı) olsun mu, yoksa yalnızca dosya mı?
-- [ ] İlaç katalogunun kaynağı (ör. TİTCK ilaç listesi Excel'i ile yükleme)
-- [ ] Lisans (AGPL-3.0 / GPL-3.0 / MIT)
 - [ ] Ödeme / fatura modülü (şimdilik kapsam dışı)
 - [ ] e-Nabız ve e-Reçete entegrasyonunun kapsamı ve zamanı. Güncel format Sağlık Bakanlığı dokümanlarından doğrulanacak
