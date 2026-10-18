@@ -14,7 +14,7 @@ Bu belge iki veritabanını kapsar:
 | Kural | Açıklama |
 |---|---|
 | Birincil anahtar | `uuid`, Laravel `HasUuids` ile uygulamada üretilir (zaman sıralı UUIDv7). FHIR `id` alanı doğrudan bu değerdir; tekrarlanan aktarımlar mükerrer kayıt üretmez. İstisnalar: `access_logs` (`bigint identity`), kataloglarda doğal anahtarlar (`icd10_codes.code`, `atc_codes.code`, `settings.key`) |
-| Zaman | Anlık zamanlar `timestamptz`, takvim günleri `date`. Kliniğin saat dilimi `settings.timezone` (varsayılan `Europe/Istanbul`) |
+| Zaman | Anlık zamanlar `timestamptz`, takvim günleri `date`. Kliniğin saat dilimi `settings.timezone` (varsayılan ülkeye göre: `Europe/Istanbul` ya da `Asia/Famagusta`) |
 | Durum alanları | PostgreSQL `enum` tipi yerine `varchar + CHECK`. Yeni değer eklemek migration ile kolay olur |
 | Silme | Klinik kayıtlar **yumuşak silinir** (`deleted_at`). Tıbbi kayıt fiziksel olarak silinmez; silme işlemi erişim loguna yazılır |
 | Kim yaptı | Klinik tablolarında `created_by` / `updated_by` (→ `users.id`) |
@@ -39,7 +39,7 @@ erDiagram
     patients ||--o{ patient_identifiers : "kimlikler"
     patients ||--o{ patient_allergies : "alerjiler"
     patients ||--o{ patient_conditions : "kronik hastalıklar"
-    patients ||--o{ consents : "KVKK rızaları"
+    patients ||--o{ consents : "kişisel veri rızaları"
     patients ||--o{ appointments : ""
     patients ||--o{ encounters : "muayeneler"
     patients ||--o{ prescriptions : "reçeteler"
@@ -61,7 +61,6 @@ erDiagram
     vaccines ||--o{ immunizations : "katalog"
     vaccines ||--o{ planned_immunizations : "katalog"
     planned_immunizations |o--o| immunizations : "yapılınca bağlanır"
-    vaccines ||--o{ vaccine_schedule_rules : "aşı takvimi"
     observation_types ||--o{ observations : "tür"
     imports ||--o{ immunizations : "dosyadan geldi"
     imports ||--o{ observations : "dosyadan geldi"
@@ -105,12 +104,13 @@ Başlıca anahtarlar:
 |---|---|
 | `installation_id` | Kurulumda üretilir, değişmez. FHIR'de hasta kimlik sistemi olarak kullanılır |
 | `clinic.name`, `clinic.address`, `clinic.phone` | Klinik bilgileri |
-| `timezone` | Varsayılan `Europe/Istanbul` |
+| `clinic.country` | `TR` ya da `KKTC`. Kurulumda seçilir; saat dilimi, ilaç listesi, reçete türleri ve rıza metinlerinin varsayılanlarını belirler ([PLAN.md 1.6](PLAN.md)) |
+| `timezone` | Varsayılan ülkeye göre: `Europe/Istanbul` (TR), `Asia/Famagusta` (KKTC) |
 | `share.ttl_minutes`, `share.max_uses` | QR bağlantısının süresi ve kullanım sayısı (varsayılan 15 ve 1) |
 | `share.public_base_url` | Alan adı (varsa). Yoksa QR paylaşımı kapalıdır, yalnızca dosya |
 | `appointment.default_minutes` | Varsayılan randevu süresi |
 
-### `access_logs`: erişim logu (KVKK)
+### `access_logs`: erişim logu
 Yalnızca ekleme yapılır. Bir veritabanı tetikleyicisi `UPDATE` ve `DELETE` işlemlerini engeller.
 
 | Kolon | Tip | Not |
@@ -158,15 +158,15 @@ Yalnızca ekleme yapılır. Bir veritabanı tetikleyicisi `UPDATE` ve `DELETE` i
 - `gin (lower(first_name || ' ' || last_name) gin_trgm_ops)`: "ayse sahin" araması "Ayşe Şahin"i de bulur. Türkçe karakter sadeleştirmesi için ayrıca `search_name` üretilmiş kolon (`unaccent` + `lower`) değerlendirilecek
 - `(phone)`, `(birth_date)`
 
-### `patient_identifiers`: opsiyonel kimlikler (TCKN zorunlu değil)
+### `patient_identifiers`: opsiyonel kimlikler (hiçbiri zorunlu değil)
 | Kolon | Tip | Kısıt / Not |
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients, cascade |
-| type | varchar(20) | CHECK in (`tckn`, `passport`, `yupassport`, `lokman`, `other`) |
+| type | varchar(20) | CHECK in (`national_id` arayüzde "Kimlik": TCKN, KKTC kimlik no vb., `passport`, `lokman`, `other`) |
 | system | varchar(255) | FHIR `identifier.system`. Başka Lokman kliniği ya da mobil uygulama kimliği için ör. `urn:lokman:<kurulum-uuid>:patient`, `urn:lokman:app:<uuid>:profile` |
-| value | varchar(100) | not null. TCKN girilirse algoritmayla doğrulanır |
-| issuer | varchar(50) | ör. pasaportu veren ülke (ISO 3166) |
+| value | varchar(100) | not null. **Doğrulama yapılmaz**; yalnızca baştaki/sondaki boşluklar temizlenir |
+| issuer | varchar(50) | Veren ülke: `TR`, `KKTC` ya da ISO 3166 kodu. Kimlik no girilirken varsayılan `clinic.country` |
 | created_at, updated_at | timestamptz | |
 
 Kısıt: `unique(type, system, value)`, aynı kimlik iki hastaya verilemez.
@@ -223,13 +223,13 @@ Panelde alerji girerken madde `atc_codes` ve ilaç katalogundaki etken maddelerd
 İndeks: `unique(origin_ref) WHERE origin_ref IS NOT NULL`
 FHIR: `Condition` (category = `problem-list-item`)
 
-### `consents`: KVKK aydınlatma ve açık rıza
+### `consents`: kişisel veri aydınlatma ve açık rıza
 | Kolon | Tip | Not |
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients |
-| type | varchar(30) | CHECK in (`kvkk_disclosure` aydınlatma, `kvkk_explicit_consent` açık rıza, `data_sharing` mobil paylaşım) |
-| text_version | varchar(20) | Hangi metin sürümü onaylandı |
+| type | varchar(30) | CHECK in (`disclosure` aydınlatma, `explicit_consent` açık rıza, `data_sharing` mobil paylaşım). Metin ülkeye göre (TR: KVKK, KKTC: kendi yasası) |
+| text_version | varchar(20) | Hangi metin sürümü onaylandı, ör. `TR-2026-1`, `KKTC-2026-1` |
 | granted | boolean | |
 | granted_at | timestamptz | |
 | revoked_at | timestamptz null | |
@@ -316,7 +316,7 @@ FHIR: `Condition` (category = `encounter-diagnosis`, `verificationStatus`)
 | origin_name, origin_practitioner, origin_ref | varchar | Dış kaynaklı reçete için |
 | import_id | uuid null | → imports |
 | issued_at | timestamptz | not null |
-| type | varchar(10) | CHECK in (`normal`, `red`, `green`, `purple`, `orange`): reçete türü (normal / kırmızı / yeşil / mor / turuncu) |
+| type | varchar(10) | CHECK in (`normal`, `red`, `green`, `purple`, `orange`): reçete türü (normal / kırmızı / yeşil / mor / turuncu). Panel yalnızca `clinic.country` için geçerli türleri gösterir; KKTC türleri doğrulanana kadar orada yalnızca `normal` |
 | erecete_no | varchar(30) | e-Reçete numarası (varsa, elle girilir) |
 | note | text | |
 | created_by, timestamps, deleted_at | | |
@@ -380,7 +380,7 @@ FHIR: `Immunization`.
 > Panelde aşı girilirken "sonraki doz tarihi" alanı doldurulursa ayrı bir kolona yazılmaz; otomatik olarak bir `planned_immunizations` kaydı oluşturulur. Böylece gelecek aşıların tek bir kaynağı olur.
 
 ### `planned_immunizations`: planlanan aşılar
-Yapılacak aşılar burada tutulur. Örnekler: ateş nedeniyle kontrole ertelenen Td, bir aşının sonraki dozu, ulusal takvimden önerilen doz, sezonluk grip aşısı.
+Yapılacak aşılar burada tutulur. Örnekler: ateş nedeniyle kontrole ertelenen Td, bir aşının sonraki dozu, sezonluk grip aşısı. Ulusal aşı takvimi kapsam dışıdır; planlar elle ya da sonraki doz olarak oluşur.
 
 | Kolon | Tip | Kısıt / Not |
 |---|---|---|
@@ -392,7 +392,7 @@ Yapılacak aşılar burada tutulur. Örnekler: ateş nedeniyle kontrole ertelene
 | dose_number | smallint | |
 | due_on | date | not null. Yapılması gereken tarih |
 | status | varchar(10) | CHECK in (`planned`, `completed`, `cancelled`), default `planned` |
-| origin | varchar(20) | CHECK in (`manual` doktor/sekreter elle, `next_dose` önceki aşının sonraki dozu, `schedule` ulusal takvimden) |
+| origin | varchar(20) | CHECK in (`manual` doktor/sekreter elle, `next_dose` önceki aşının sonraki dozu) |
 | encounter_id | uuid null | → encounters (planın yapıldığı muayene) |
 | previous_immunization_id | uuid null | → immunizations (`origin = next_dose` ise önceki doz) |
 | immunization_id | uuid null | → immunizations, unique. Aşı yapılınca bağlanır, durum `completed` olur |
@@ -402,7 +402,6 @@ Yapılacak aşılar burada tutulur. Örnekler: ateş nedeniyle kontrole ertelene
 
 Kurallar:
 - Aşı kaydedilirken hastanın aynı aşıya ait `planned` kaydı varsa panel "Planlanan aşı yapıldı olarak işaretlensin mi?" diye sorar. Onaylanırsa `immunization_id` bağlanır.
-- Ulusal takvim (`vaccine_schedule_rules`) çocuk hastalarda **öneri** olarak hesaplanır, kendiliğinden kayıt oluşturmaz. Doktor öneriyi tek tıkla planlanan aşıya çevirir.
 - `due_on` geçmiş ve durumu `planned` olan kayıt panelde "gecikmiş aşı" olarak listelenir.
 
 İndeksler: `(patient_id, due_on) WHERE status = 'planned'`, `(due_on) WHERE status = 'planned'` (panelde "bu hafta yapılacak aşılar" listesi)
@@ -436,22 +435,22 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 
 ## 5. Kataloglar ve aktarım
 
-### `medications`: ilaç katalogu (TİTCK listesinden)
+### `medications`: ilaç katalogu (TİTCK ya da KKTC listesinden)
 | Kolon | Tip | Not |
 |---|---|---|
 | id | uuid | PK |
-| barcode | varchar(20) | unique (null hariç). TİTCK listesinde eşleştirme anahtarı |
+| barcode | varchar(20) | unique (null hariç). İlaç listesinde eşleştirme anahtarı |
 | name | varchar(300) | not null |
 | active_ingredient | varchar(300) | |
 | active_ingredient_en | varchar(300) | Uluslararası ad (INN). Dışa aktarımda eklenir |
-| atc_code | varchar(10) | TİTCK listesinden (5. düzey). İlaç–alerji uyarısı bu koda dayanır |
+| atc_code | varchar(10) | İlaç listesinden (5. düzey). İlaç–alerji uyarısı bu koda dayanır |
 | form | varchar(50) | tablet, şurup… |
 | strength | varchar(100) | |
 | manufacturer | varchar(200) | |
 | prescription_type | varchar(10) | normal / red / green / purple / orange |
-| is_active | boolean | TİTCK listesinden çıkan ilaç pasifleşir, silinmez |
-| source | varchar(10) | CHECK in (`titck`, `manual`) |
-| synced_at | timestamptz | Son TİTCK güncellemesi |
+| is_active | boolean | Listeden çıkan ilaç pasifleşir, silinmez |
+| source | varchar(10) | CHECK in (`titck`, `kktc`, `manual`) |
+| synced_at | timestamptz | Son liste güncellemesi |
 | created_at, updated_at | timestamptz | |
 
 İndeks: `gin (name gin_trgm_ops)`, `(atc_code)`
@@ -502,20 +501,6 @@ TİTCK içe aktarımı `lokman` ve `manual` satırlarının üzerine yazmaz.
 | atc_code | varchar(10) | |
 | description | text | |
 | is_active | boolean | |
-
-### `vaccine_schedule_rules`: aşı takvimi şablonu
-Ulusal takvim hazır gelir; klinik düzenleyebilir.
-
-| Kolon | Tip | Not |
-|---|---|---|
-| id | uuid | PK |
-| vaccine_id | uuid | → vaccines |
-| dose_number | smallint | |
-| age_months | smallint | Doğumdan itibaren ay, ör. Hepatit B için 0, 1, 6 |
-| min_interval_days | smallint | Önceki dozdan sonra en az kaç gün |
-| is_active | boolean | |
-
-Kısıt: `unique(vaccine_id, dose_number)`
 
 ### `observation_types`: ölçüm türleri
 Varsayılanlar: kilo, boy, tansiyon, nabız, ateş, kan şekeri, SpO₂. Klinik yeni tür ekleyebilir, ör. HbA1c.
@@ -594,7 +579,7 @@ Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. He
 | `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre |
 | `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde kalır, hiçbir dışa aktarıma girmez** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
-| `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları. (Profilin yaşına göre ulusal takvim önerileri v0.1 sonrasında) |
+| `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları |
 | `observations` | Ölçümler (klinikten gelen + hastanın girdiği) |
 | `appointments` | Klinikten gelen gelecek randevular |
 | `allergies`, `conditions` | Alerji ve kronik hastalıklar. `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
@@ -612,7 +597,7 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 - Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulur.
 - Muayenede hikaye, bulgular, hastaya giden öneriler (`plan`) ve iç not ayrı alanlar.
 - Protokol numarası yıl + sıra: `2026-000123` (yıl başında sıra sıfırlanır; PostgreSQL sequence + yıl).
-- TCKN ve diğer kimlikler düz saklanır (arama ve algoritma doğrulaması için). Koruma veritabanı/disk düzeyinde şifreleme, rol bazlı erişim ve erişim logu ile sağlanır.
+- Kimlik numaraları (TCKN, KKTC kimlik no vb.) tek bir `national_id` türüyle, doğrulamasız ve düz saklanır (arama için). Koruma veritabanı/disk düzeyinde şifreleme, rol bazlı erişim ve erişim logu ile sağlanır.
 - Başka kurumdan gelen kayıtlar aynı tablolara `source = external` ile eklenir; onay kuyruğuna girmez. Yalnızca hasta beyanı onay bekler.
 - Dosyadan gelen her kayıtta `origin_ref` tutulur ve tekildir; tekrar aktarım kayıt çoğaltmaz (alerji ve kronik hastalık dahil).
 - Katalogda olmayan kodlar reddedilmez; ham kodlama `coding` kolonunda saklanır, katalog FK'si boş kalır.

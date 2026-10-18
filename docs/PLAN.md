@@ -24,7 +24,7 @@ flowchart LR
   A -- "FHIR dosyası + PDF özet" --> H[Başka klinik / hastane<br/>yurt dışı kurum]
 ```
 
-> **v0.1 kapsamı:** ilk sürüm sade tutulur. Yerel ağ QR'ı, Google Drive yedeği ve mobilde ulusal aşı takvimi önerileri v0.1'e girmez (bkz. [7. Sonra](#sonra)).
+> **v0.1 kapsamı:** ilk sürüm sade tutulur. Yerel ağ QR'ı ve Google Drive yedeği v0.1'e girmez. Ulusal aşı takvimi kapsam dışıdır (bkz. [7. Sonra](#sonra)).
 
 ---
 
@@ -39,7 +39,7 @@ flowchart LR
 | Kurulum | Tek klinik, self-hosted, Docker Compose |
 | Mobil | Flutter, ilk hedef **Android APK** |
 | Lisans | MIT |
-| Hedef ülkeler | Türkiye ve KKTC |
+| Hedef ülkeler | Türkiye ve KKTC. Kurulumda ülke seçilir (`clinic.country`); ülkeye bağlı varsayılanlar için bkz. 1.6 |
 | Resmî sistemler | e-Nabız / e-Reçete entegrasyonu **zorunlu değil** ve v0.1'de yok (KKTC'de de kullanılacağı için ürün bunlara bağlı tasarlanmaz) |
 | Kod dili | Kod tanımlayıcıları İngilizce (Laravel/Flutter gelenekleri), arayüz Türkçe |
 
@@ -54,15 +54,15 @@ flowchart LR
 ### 1.3 Hasta ve klinik veri
 | Konu | Karar |
 |---|---|
-| Kimlik | **TCKN temelli değil.** Birincil anahtar UUID. TCKN, pasaport gibi kimlikler opsiyoneldir |
-| TCKN saklama | Veritabanında düz saklanır (arama ve doğrulama için). Koruma: veritabanı/disk düzeyinde şifreleme, rol bazlı erişim, erişim logu |
+| Kimlik | **Kimlik numarası temelli değil.** Birincil anahtar UUID. Kimlik numarası (TCKN, KKTC kimlik no vb.) ve pasaport opsiyoneldir. Kimlik numaraları ülkeden bağımsız tek bir **"kimlik"** türüyle saklanır; **algoritma doğrulaması yapılmaz** |
+| Kimlik no saklama | Veritabanında düz saklanır (arama için). Koruma: veritabanı/disk düzeyinde şifreleme, rol bazlı erişim, erişim logu |
 | Protokol numarası | Yıl + sıra: `2026-000123` |
 | Alerji / kronik hastalık | Ayrı, yapısal tablolar. Hasta beyanı da kabul edilir (onay akışıyla). İlaç alerjisi etken madde ya da ATC koduyla kodlanır (ilaç–alerji uyarısı için) |
 | Muayene | Şikayet, hikaye, bulgular, **öneriler (hastaya gider)** ve **iç not (hastaya gitmez)** ayrı alanlar |
 | Teşhis | ICD-10, birincil/ikincil, **ön tanı / kesin tanı** |
-| Reçete | Reçete türü (normal / kırmızı / yeşil / mor / turuncu), kutu adedi, doz, **kullanım saatleri**, süre ya da sürekli kullanım |
-| İlaç katalogu | **TİTCK ilaç listesi** (Excel) panelden içe aktarılır ve güncellenir |
-| Aşı | Yapılan aşılar (`immunizations`) ve **planlanan aşılar** (`planned_immunizations`) ayrı tablolar. Ulusal aşı takvimi öneri olarak hesaplanır |
+| Reçete | Reçete türü (normal / kırmızı / yeşil / mor / turuncu; ülkeye göre, bkz. 1.6), kutu adedi, doz, **kullanım saatleri**, süre ya da sürekli kullanım |
+| İlaç katalogu | Türkiye'de **TİTCK ilaç listesi**, KKTC'de KKTC ilaç listesi (Excel) panelden içe aktarılır ve güncellenir (bkz. 1.6) |
+| Aşı | Yapılan aşılar (`immunizations`) ve **planlanan aşılar** (`planned_immunizations`) ayrı tablolar. Planlanan aşılar elle ya da önceki aşının sonraki dozu olarak girilir. **Ulusal aşı takvimi kapsam dışı** |
 | Hasta beyanı | Hastanın getirdiği aşı, alerji, kronik hastalık ve ölçümler **onay kuyruğuna** düşer |
 | Dış kaynaklı kayıtlar | Başka kurumdan gelen muayene, teşhis, reçete, aşı, ölçüm, alerji ve kronik hastalıklar aynı tablolara `source = external` ile, kurum adıyla ve salt okunur eklenir. Onay kuyruğuna girmez |
 | Katalogda olmayan kod | Dışarıdan gelen ve katalogda bulunmayan kod (ör. ICD-10-CM, bilinmeyen LOINC) reddedilmez; ham kodlama kayıtta saklanır, katalog bağlantısı boş kalır |
@@ -86,9 +86,21 @@ flowchart LR
 | Profiller | Aile profilleri. Ebeveyn çocuğu için klinik dosyası olmadan profil açıp alerji, aşı, ölçüm girebilir |
 | Birden çok klinik | Farklı kliniklerden gelen veriler aynı profilde birleşir |
 | Bildirimler | Cihazda zamanlanır: ilaç doz saatleri, planlanan aşılar, randevular |
-| Aşı takvimi | v0.1'de mobil yalnızca klinikten gelen planlanan aşıları gösterir; ulusal takvim önerileri sonra |
+| Aşılar | Mobil, klinikten gelen planlanan aşıları gösterir. Ulusal aşı takvimi kapsam dışı |
 | Şifreleme | Uygulama içinde ek şifreleme ya da uygulama kilidi yok. Veri, telefonun kendi ekran kilidi ve Android'in uygulama alanı korumasıyla korunur |
 | Yedek | v0.1'de yok. Kullanıcı tüm veriyi FHIR dosyası olarak dışa aktarıp saklayabilir; Google Drive yedeği sonra |
+
+### 1.6 Ülke farkları (Türkiye / KKTC)
+Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılanları belirler. Kod tabanı tektir; fark yalnızca ayar, seed ve metindedir.
+
+| Konu | Türkiye | KKTC |
+|---|---|---|
+| Kimlik no | TCKN, "kimlik" türüyle, doğrulamasız | KKTC kimlik no, "kimlik" türüyle, doğrulamasız |
+| İlaç katalogu | TİTCK listesi | KKTC ilaç listesi. Kaynağı ve biçimi F1'de araştırılır; bulunamazsa esnek sütun eşlemeli genel Excel/CSV içe aktarımı ya da elle giriş |
+| Reçete türleri | normal, kırmızı, yeşil, mor, turuncu | KKTC'de geçerli türler F1'de doğrulanır; o zamana kadar yalnızca `normal` |
+| Kişisel veri metinleri | KVKK (6698) aydınlatma ve açık rıza | KKTC kişisel veri yasasına göre metinler |
+| Saat dilimi | `Europe/Istanbul` | `Asia/Famagusta` (yaz saati uygulaması F1'de teyit edilir) |
+| Ulusal sistemler | e-Nabız / e-Reçete entegrasyonu yok | — |
 
 ---
 
@@ -97,17 +109,17 @@ flowchart LR
 ### 2.1 Modüller
 | Modül | İçerik |
 |---|---|
-| Hasta kaydı | Kimlik bilgileri, iletişim, acil durum kişisi, opsiyonel kimlikler, protokol no, alerjiler, kronik hastalıklar, KVKK rızaları |
+| Hasta kaydı | Kimlik bilgileri, iletişim, acil durum kişisi, opsiyonel kimlikler, protokol no, alerjiler, kronik hastalıklar, kişisel veri rızaları |
 | Randevu | Doktor bazında günlük/haftalık takvim. Ekle, taşı, iptal et, "geldi / gelmedi". Randevudan tek tıkla muayene |
 | Muayene | Şikayet, hikaye, bulgular, öneriler, iç not, vital bulgular. Hastanın geçmişi (dış kaynaklı kayıtlar dahil) tek zaman çizelgesinde |
 | Teşhis | ICD-10 arama, birincil/ikincil, ön/kesin tanı |
-| Reçete | TİTCK katalogundan ilaç, doz, kullanım saatleri, süre, kutu, reçete türü. **İlaç–alerji uyarısı** (etken madde / ATC eşleşmesi) |
-| Aşı | Aşı kaydı (lot, son kullanma, uygulayan), planlanan aşılar, ulusal takvim önerileri, "gecikmiş" ve "bu hafta" listeleri |
+| Reçete | İlaç katalogundan (TİTCK / KKTC) ilaç, doz, kullanım saatleri, süre, kutu, reçete türü. **İlaç–alerji uyarısı** (etken madde / ATC eşleşmesi) |
+| Aşı | Aşı kaydı (lot, son kullanma, uygulayan), planlanan aşılar, "gecikmiş" ve "bu hafta" listeleri |
 | Ölçümler | Ölçüm girişi, normal aralık uyarısı, trend grafikleri (hastanın girdikleri dahil) |
 | Onay kuyruğu | Hasta beyanı aşı, alerji, kronik hastalık ve ölçümleri onayla/reddet |
 | Paylaşım | QR (internet), FHIR dosyası ve PDF özet indirme, aktif bağlantıları iptal |
 | İçe aktarım | FHIR dosyası yükleme, hasta eşleştirme (otomatik ya da elle / yeni hasta), içe aktarım geçmişi. Sekreter yalnızca kimlik bilgilerini ve kayıt sayılarını görür, paket içeriğini göremez |
-| Kataloglar | İlaç (TİTCK), ICD-10, ATC alerji grupları (proje yazar; WHO listesi dağıtılmaz), aşı ve aşı takvimi, ölçüm türleri |
+| Kataloglar | İlaç (TİTCK / KKTC), ICD-10, ATC alerji grupları (proje yazar; WHO listesi dağıtılmaz), aşılar, ölçüm türleri |
 | Yönetim | Kullanıcılar, roller, klinik ayarları (QR süresi, alan adı), erişim logu |
 
 ### 2.2 Rol–yetki matrisi
@@ -193,7 +205,7 @@ flowchart LR
 
 ### 4.2 Kimlik ve eşleştirme
 - Her klinik kurulumu kalıcı bir **kurulum kimliği** (UUID), her mobil uygulama kalıcı bir **uygulama kimliği** üretir.
-- `Patient.identifier`: `urn:lokman:<kurulum-uuid>:patient` | `<hasta UUID>`, mobil profil için `urn:lokman:app:<uygulama-uuid>:profile` | `<profil UUID>`. TCKN/pasaport varsa ek identifier.
+- `Patient.identifier`: `urn:lokman:<kurulum-uuid>:patient` | `<hasta UUID>`, mobil profil için `urn:lokman:app:<uygulama-uuid>:profile` | `<profil UUID>`. Kimlik no / pasaport varsa ek identifier (kimlik no: `type` = `NI`, `system` veren ülkeye göre; ayrıntı sözleşmede).
 - Kaynak `id`'leri kararlı UUID'dir; aynı dosya tekrar aktarılırsa kayıt güncellenir, çoğalmaz.
 - **Mobilde:** bilinen identifier → ilgili profil; bilinmiyorsa "hangi profil?" (ad + doğum tarihine göre öneri).
 - **Klinikte:** bilinen identifier → hasta otomatik bulunur; bilinmiyorsa "yeni hasta oluştur" ya da "mevcut hastayla eşleştir".
@@ -220,8 +232,8 @@ Lokman dışı kurum IPS uyumlu dosyayı FHIR ile okur; FHIR kullanmayan kurum P
 
 ---
 
-## 5. Güvenlik ve KVKK
-- **Rıza:** KVKK aydınlatma, açık rıza ve mobil paylaşım rızası kaydı (`consents`). Geçerli paylaşım rızası yoksa QR/dosya üretilmez.
+## 5. Güvenlik ve kişisel veri
+- **Rıza:** aydınlatma, açık rıza (Türkiye'de KVKK, KKTC'de kendi yasası; metin ülke ayarına göre) ve mobil paylaşım rızası kaydı (`consents`). Geçerli paylaşım rızası yoksa QR/dosya üretilmez.
 - **Aktarım:** QR her zaman TLS ile ve gerçek sertifikayla (alan adı). Süre ve kullanım sınırlı; uzun süre ayarında uyarı.
 - **Düz JSON riski:** dosya şifrelenmez; paylaşım öncesi uyarı ve erişim logu. Şifreli paket ileride eklenebilir.
 - **Depolama:** klinikte veritabanı/disk şifrelemesi ve yedekleme önerileri kurulum dokümanında. Mobilde veri uygulama alanında, uygulama içi şifreleme yok (telefonun ekran kilidine dayanılır).
@@ -258,17 +270,17 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 **Bitti sayılır:** `docker compose up` ile panele giriş yapılır; boş APK telefonda açılır; örnek paketler validator'dan geçer.
 
 ### F1: Klinik çekirdek
-- [ ] Migration'lar (VERITABANI.md'ye göre), seed: roller, ölçüm türleri, aşılar, aşı takvimi
+- [ ] Migration'lar (VERITABANI.md'ye göre), seed: roller, ölçüm türleri, aşılar; ülke ayarı (`TR` / `KKTC`) ve ülkeye bağlı varsayılanlar
 - [ ] Kullanıcılar ve roller, Policy'ler, erişim logu
-- [ ] Hasta kaydı: kimlikler (TCKN doğrulama), alerjiler, kronik hastalıklar, rızalar, Türkçe karakterli arama
-- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı (ATC sütunu ve etken maddeler dahil), ICD-10 yükleme, ATC alerji grupları seed'i
+- [ ] Hasta kaydı: kimlikler (kimlik no, pasaport; doğrulama yok), alerjiler, kronik hastalıklar, rızalar, Türkçe karakterli arama
+- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı (ATC sütunu ve etken maddeler dahil), KKTC ilaç listesinin kaynağını bulmak ve içe aktarımı, ICD-10 yükleme, ATC alerji grupları seed'i
 - [ ] Randevu takvimi (doktor kendi, sekreter tümü), çakışma kısıtı
 - [ ] Muayene, teşhis (ön/kesin), reçete (saatler, süre, tür, kutu), ilaç–alerji uyarısı (etken madde / ATC öneki eşleşmesi; kodsuz alerjide genel uyarı)
 
 **Bitti sayılır:** Ayşe senaryosunun 1–3. adımları panelde uçtan uca yapılabilir; sekreter klinik içeriği göremez (test ile); penisilin alerjisi olan hastaya amoksisilin yazılınca uyarı çıkar.
 
 ### F2: Aşı, ölçüm, onay kuyruğu
-- [ ] Aşı kaydı, planlanan aşılar, "yapıldı" bağlantısı, ulusal takvim önerileri
+- [ ] Aşı kaydı, planlanan aşılar (elle / sonraki doz), "yapıldı" bağlantısı
 - [ ] Gecikmiş / bu hafta aşı listeleri
 - [ ] Ölçümler, normal aralık uyarısı, grafikler
 - [ ] Onay kuyruğu (aşı, alerji, kronik hastalık, ölçüm)
@@ -294,7 +306,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 **Bitti sayılır:** Ayşe senaryosunun 4–6. adımları gerçek telefonda yapılır; telefondan alınan dosya panele aktarılır.
 
 ### F5: Yayın (v0.1)
-- [ ] KVKK metinleri ve ekranları (panel + mobil)
+- [ ] Kişisel veri metinleri ve ekranları (Türkiye: KVKK, KKTC: kendi yasası; panel + mobil)
 - [ ] APK imzalama ve sürüm yayını
 - [ ] `docs/kurulum.md`: kurulum, alan adı, yedekleme, güncelleme
 - [ ] Demo verisi
@@ -302,7 +314,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 **Bitti sayılır:** temiz bir sunucuda kurulum dokümanıyla kurulur; imzalı APK yayınlanır.
 
 ### Sonra
-- v0.1'den ertelenenler: **yerel ağ QR'ı** (kendinden imzalı sertifika, parmak izi doğrulaması, IP seçimi), **Google Drive yedeği / geri yükleme**, **mobilde ulusal aşı takvimi önerileri**
+- v0.1'den ertelenenler: **yerel ağ QR'ı** (kendinden imzalı sertifika, parmak izi doğrulaması, IP seçimi), **Google Drive yedeği / geri yükleme**
 - İsteğe bağlı e-Nabız / e-Reçete dönüştürücü katmanı (yalnızca Türkiye'deki kurulumlar için), iOS, şifreli paket, randevu için SMS/e-posta hatırlatma, çoklu rol
 
 ---
@@ -320,6 +332,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 |---|---|
 | IPS profilinin ayrıntıları (zorunlu alanlar, kod sistemleri) beklenenden katı | F0'da örnek paketleri validator'dan geçirerek sözleşmeyi erken sabitlemek |
 | TİTCK ve ICD-10 Türkçe listelerinin biçimi değişebilir / lisans koşulları | İçe aktarıcıyı esnek sütun eşlemeli yazmak; kaynak ve kullanım koşullarını F1'de doğrulamak |
+| KKTC ilaç listesinin kaynağı ve biçimi belirsiz | F1'de araştırmak; bulunamazsa genel Excel/CSV içe aktarımı ve elle giriş |
 | WHO ATC/DDD Index'in kullanım koşulları ticari dağıtımı ve değiştirmeyi kısıtlıyor | Tam liste kullanılmaz; ilaç ATC kodları TİTCK listesinden, alerji grup adları projenin kendi seed'inden. TİTCK listesinde ATC sütunu olduğu F1'de doğrulanır; yoksa uyarı etken madde eşleşmesiyle çalışır ve ATC kodu elle girilir |
 | Android bildirim kısıtlamaları (pil optimizasyonu, tam zamanlı alarm izni) | İzin akışını açık anlatmak, gerçek cihazlarda test |
 | Düz JSON dosyanın yanlış kişiye gitmesi | Paylaşım uyarısı, erişim logu; şifreli paket "Sonra" listesinde |
@@ -331,3 +344,4 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 ## 10. Açık konular
 - [ ] Randevu için hastaya SMS / e-posta hatırlatma (şimdilik "Sonra")
 - [ ] Ödeme / fatura modülü (şimdilik kapsam dışı)
+- Ulusal aşı takvimi (TR / KKTC): **kapsam dışı**
