@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../data/repository.dart';
+import '../../widgets/lokman_logo.dart';
 import '../profiles/profile_form.dart';
 
 /// İlk açılış: kısa tanıtım + ilk profil + bildirim izni.
@@ -115,11 +116,7 @@ class _Welcome extends StatelessWidget {
             child: ListView(
               children: [
                 const SizedBox(height: 24),
-                Icon(
-                  Icons.health_and_safety,
-                  size: 72,
-                  color: theme.colorScheme.primary,
-                ),
+                const Center(child: LokmanLogo(size: 88)),
                 const SizedBox(height: 16),
                 Text(
                   'Lokman’a hoş geldiniz',

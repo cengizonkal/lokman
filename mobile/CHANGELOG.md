@@ -1,5 +1,9 @@
 # Değişiklikler
 
+## Yayınlanmamış
+
+- Yeni logo: kalbin içinde artı yerine hilal. Uygulama simgesi temalı (tek renkli) simge modunda da doğru görünür; karşılama ekranında da aynı logo kullanılır.
+
 ## 0.1.0
 
 Lokman mobil uygulamasının ilk sürümü.

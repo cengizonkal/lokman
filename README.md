@@ -1,3 +1,5 @@
+<img src="mobile/branding/lokman-logo.svg" alt="Lokman logosu" width="96">
+
 # Lokman
 
 Özel klinikler için açık kaynak hasta takip sistemi.
