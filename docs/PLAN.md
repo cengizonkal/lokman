@@ -78,7 +78,7 @@ flowchart LR
 | Okunabilir özet | Her dışa aktarımla **iki dilli PDF özet** (panel ve mobil üretir) |
 | Dil | Serbest metin Türkçe. Kodlu alanlarda (teşhis, aşı, etken madde, ölçüm türü) Türkçe + İngilizce ad |
 | İlaç uyumu | "Aldım / atladım" kayıtları yalnızca mobilde kalır, dışa aktarılmaz |
-| Terminoloji | ICD-10 (teşhis), ATC (ilaç), LOINC (ölçüm), UCUM (birim). İleride SNOMED CT |
+| Terminoloji | ICD-10 (teşhis), ATC (ilaç), LOINC (ölçüm), UCUM (birim), SNOMED CT GPS (aşı ve hasta listeleri). Listeler projenin **Lokman Terminoloji Paketi**nden gelir; kaynaklar ve lisans durumu: [TERMINOLOJI.md](TERMINOLOJI.md) |
 
 ### 1.5 Mobil
 | Konu | Karar |
