@@ -1,0 +1,349 @@
+{
+  "resourceType": "Bundle",
+  "id": "0199f3a2-7b10-7c1e-9a51-2f5c8e1d0a01",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips"]
+  },
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:uuid:0199f3a2-7b10-7c1e-9a51-2f5c8e1d0a01"
+  },
+  "type": "document",
+  "timestamp": "2026-10-15T10:30:00+03:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:0199f3a2-7b10-7c1e-9a51-2f5c8e1d0a02",
+      "resource": {
+        "resourceType": "Composition",
+        "id": "0199f3a2-7b10-7c1e-9a51-2f5c8e1d0a02",
+        "status": "final",
+        "type": {
+          "coding": [{ "system": "http://loinc.org", "code": "60591-5", "display": "Patient summary Document" }]
+        },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "date": "2026-10-15T10:30:00+03:00",
+        "author": [{ "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000c001" }],
+        "title": "Hasta özeti / Patient summary",
+        "custodian": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000c001" },
+        "section": [
+          {
+            "title": "Alerjiler / Allergies",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "48765-2" }] },
+            "entry": [{ "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000a1001" }]
+          },
+          {
+            "title": "Aktif problemler / Problem list",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "11450-4" }] },
+            "entry": [{ "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000c1001" }]
+          },
+          {
+            "title": "İlaçlar / Medications",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "10160-0" }] },
+            "entry": [
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000d1001" },
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000d1002" }
+            ]
+          },
+          {
+            "title": "Aşılar / Immunizations",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "11369-6" }] },
+            "entry": [{ "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000e1001" }]
+          },
+          {
+            "title": "Vital bulgular / Vital signs",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "8716-3" }] },
+            "entry": [
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000f1001" },
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000f1002" }
+            ]
+          },
+          {
+            "title": "Muayeneler / Encounters",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "46240-8" }] },
+            "entry": [
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000b1001" },
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000b2001" }
+            ]
+          },
+          {
+            "title": "Plan / Plan of care",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "18776-5" }] },
+            "entry": [
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-000000011001" },
+              { "reference": "urn:uuid:0199f3a2-0000-7000-8000-000000012001" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "0199f3a2-0000-7000-8000-00000000a001",
+        "identifier": [
+          {
+            "system": "urn:lokman:0199f39e-1111-7aaa-8bbb-000000000001:patient",
+            "value": "0199f3a2-0000-7000-8000-00000000a001"
+          }
+        ],
+        "name": [{ "family": "Şahin", "given": ["Ayşe"] }],
+        "gender": "female",
+        "birthDate": "1984-03-12"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-00000000c001",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "0199f3a2-0000-7000-8000-00000000c001",
+        "identifier": [
+          { "system": "urn:lokman:installation", "value": "0199f39e-1111-7aaa-8bbb-000000000001" }
+        ],
+        "name": "Örnek Aile Kliniği"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000a1001",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "0199f3a2-0000-7000-8000-0000000a1001",
+        "clinicalStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active" }]
+        },
+        "verificationStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification", "code": "confirmed" }]
+        },
+        "category": ["medication"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://www.whocc.no/atc", "code": "J01C", "display": "Beta-lactam antibacterials, penicillins" }],
+          "text": "Penisilin grubu"
+        },
+        "patient": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "reaction": [{ "manifestation": [{ "text": "Kurdeşen" }] }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000c1001",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "0199f3a2-0000-7000-8000-0000000c1001",
+        "clinicalStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }]
+        },
+        "verificationStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }]
+        },
+        "category": [
+          { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "problem-list-item" }] }
+        ],
+        "code": {
+          "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10", "code": "I10", "display": "Essential (primary) hypertension" }],
+          "text": "Esansiyel hipertansiyon"
+        },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "onsetDateTime": "2021-05-04"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000b1001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "0199f3a2-0000-7000-8000-0000000b1001",
+        "extension": [
+          {
+            "url": "https://github.com/cengizonkal/lokman/fhir/StructureDefinition/encounter-findings",
+            "valueString": "TA 150/95 mmHg. Boğaz hiperemik."
+          },
+          {
+            "url": "https://github.com/cengizonkal/lokman/fhir/StructureDefinition/encounter-plan",
+            "valueString": "Tuz kısıtlaması, günde 30 dk yürüyüş. 2 hafta sonra tansiyon kontrolü."
+          }
+        ],
+        "status": "finished",
+        "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "AMB" },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "participant": [{ "individual": { "display": "Dr. Mehmet Yılmaz" } }],
+        "period": { "start": "2026-10-15T10:00:00+03:00" },
+        "reasonCode": [{ "text": "Boğaz ağrısı ve baş ağrısı" }],
+        "serviceProvider": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000c001" }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000b2001",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "0199f3a2-0000-7000-8000-0000000b2001",
+        "verificationStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "provisional" }]
+        },
+        "category": [
+          { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "encounter-diagnosis" }] }
+        ],
+        "code": {
+          "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10", "code": "J02.9", "display": "Acute pharyngitis, unspecified" }],
+          "text": "Akut farenjit"
+        },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "encounter": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000b1001" },
+        "recordedDate": "2026-10-15"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000d1001",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "0199f3a2-0000-7000-8000-0000000d1001",
+        "status": "active",
+        "intent": "order",
+        "groupIdentifier": { "value": "0199f3a2-0000-7000-8000-0000000d0001" },
+        "medicationCodeableConcept": {
+          "coding": [{ "system": "http://www.whocc.no/atc", "code": "C09AA05", "display": "ramipril" }],
+          "text": "Ramipril 5 mg tablet"
+        },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "encounter": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000b1001" },
+        "authoredOn": "2026-10-15",
+        "requester": { "display": "Dr. Mehmet Yılmaz" },
+        "dosageInstruction": [
+          {
+            "text": "Sabah 1 tablet, aç karnına",
+            "timing": { "repeat": { "timeOfDay": ["08:00:00"] } },
+            "doseAndRate": [{ "doseQuantity": { "value": 1, "unit": "tablet" } }]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000d1002",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "0199f3a2-0000-7000-8000-0000000d1002",
+        "status": "active",
+        "intent": "order",
+        "groupIdentifier": { "value": "0199f3a2-0000-7000-8000-0000000d0001" },
+        "medicationCodeableConcept": {
+          "coding": [{ "system": "http://www.whocc.no/atc", "code": "J01FA10", "display": "azithromycin" }],
+          "text": "Azitromisin 500 mg tablet"
+        },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "encounter": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-0000000b1001" },
+        "authoredOn": "2026-10-15",
+        "requester": { "display": "Dr. Mehmet Yılmaz" },
+        "dosageInstruction": [
+          {
+            "text": "Günde 1 kez, tok karnına",
+            "timing": {
+              "repeat": {
+                "boundsDuration": { "value": 3, "unit": "d", "system": "http://unitsofmeasure.org", "code": "d" },
+                "timeOfDay": ["20:00:00"]
+              }
+            },
+            "doseAndRate": [{ "doseQuantity": { "value": 1, "unit": "tablet" } }]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000e1001",
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "0199f3a2-0000-7000-8000-0000000e1001",
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [{ "system": "http://www.whocc.no/atc", "code": "J07AM51", "display": "tetanus toxoid, combinations with diphtheria toxoid" }],
+          "text": "Tetanoz-difteri (Td)"
+        },
+        "patient": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "occurrenceDateTime": "2026-10-15T10:20:00+03:00",
+        "primarySource": true,
+        "lotNumber": "TD2026A",
+        "protocolApplied": [{ "doseNumberPositiveInt": 1 }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-000000011001",
+      "resource": {
+        "resourceType": "ImmunizationRecommendation",
+        "id": "0199f3a2-0000-7000-8000-000000011001",
+        "patient": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "date": "2026-10-15",
+        "recommendation": [
+          {
+            "vaccineCode": [
+              {
+                "coding": [{ "system": "http://www.whocc.no/atc", "code": "J07AM51", "display": "tetanus toxoid, combinations with diphtheria toxoid" }],
+                "text": "Tetanoz-difteri (Td)"
+              }
+            ],
+            "forecastStatus": {
+              "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status", "code": "due" }]
+            },
+            "dateCriterion": [
+              {
+                "code": { "coding": [{ "system": "http://loinc.org", "code": "30980-7", "display": "Date vaccine due" }] },
+                "value": "2026-11-15T09:00:00+03:00"
+              }
+            ],
+            "doseNumberPositiveInt": 2
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000f1001",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "0199f3a2-0000-7000-8000-0000000f1001",
+        "status": "final",
+        "category": [
+          { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs" }] }
+        ],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "85354-9", "display": "Blood pressure panel" }], "text": "Tansiyon" },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "effectiveDateTime": "2026-10-15T10:05:00+03:00",
+        "component": [
+          {
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure" }] },
+            "valueQuantity": { "value": 150, "unit": "mmHg", "system": "http://unitsofmeasure.org", "code": "mm[Hg]" }
+          },
+          {
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "8462-4", "display": "Diastolic blood pressure" }] },
+            "valueQuantity": { "value": 95, "unit": "mmHg", "system": "http://unitsofmeasure.org", "code": "mm[Hg]" }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-0000000f1002",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "0199f3a2-0000-7000-8000-0000000f1002",
+        "status": "final",
+        "category": [
+          { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs" }] }
+        ],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "29463-7", "display": "Body weight" }], "text": "Kilo" },
+        "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
+        "effectiveDateTime": "2026-10-15T10:05:00+03:00",
+        "valueQuantity": { "value": 68.5, "unit": "kg", "system": "http://unitsofmeasure.org", "code": "kg" }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0199f3a2-0000-7000-8000-000000012001",
+      "resource": {
+        "resourceType": "Appointment",
+        "id": "0199f3a2-0000-7000-8000-000000012001",
+        "status": "booked",
+        "description": "Tansiyon kontrolü",
+        "start": "2026-10-29T14:30:00+03:00",
+        "end": "2026-10-29T14:45:00+03:00",
+        "participant": [
+          { "actor": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" }, "status": "accepted" },
+          { "actor": { "display": "Dr. Mehmet Yılmaz" }, "status": "accepted" }
+        ]
+      }
+    }
+  ]
+}

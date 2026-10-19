@@ -1,0 +1,46 @@
+name: lokman
+description: "Lokman: ailenin kişisel sağlık defteri."
+publish_to: 'none'
+
+# Sürüm adı + derleme numarası. Release iş akışı `v<sürüm adı>` etiketi
+# yoksa yeni bir GitHub sürümü yayınlar; her yayında derleme numarasını artırın.
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  drift: ^2.35.2
+  drift_flutter: ^0.3.1
+  file_picker: ^13.1.0
+  fl_chart: ^1.2.0
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^22.3.2
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  flutter_timezone: ^5.1.1
+  go_router: ^18.1.0
+  http: ^1.6.0
+  intl: ^0.20.3
+  mobile_scanner: ^7.4.2
+  package_info_plus: ^10.2.2
+  path_provider: ^2.1.6
+  pdf: ^3.13.1
+  share_plus: ^13.3.1
+  timezone: ^0.11.2
+  uuid: ^4.6.0
+
+dev_dependencies:
+  build_runner: ^2.16.2
+  drift_dev: ^2.35.1
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/
+    - assets/examples/
