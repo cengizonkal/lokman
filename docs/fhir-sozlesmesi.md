@@ -62,7 +62,7 @@ Etiket yoksa kayıt, paketi üreten kurumun (Organization) kaydı sayılır. Kli
 | FHIR | Mobil tablo | Okunan / yazılan alanlar |
 |---|---|---|
 | `Encounter` | `encounters` | `period.start`, `participant[0].individual.display`, `reasonCode[].text`, eklentiler: `encounter-findings`, `encounter-plan` (`valueString`) |
-| `Condition` + `encounter-diagnosis` | `diagnoses` | `code` (ICD-10), `verificationStatus` (`provisional` / `confirmed`), `encounter`, `recordedDate` |
+| `Condition` + `encounter-diagnosis` | `diagnoses` | `code` (ICD-11: `http://id.who.int/icd/release/11/mms`; eşleme lisansı uygunsa ek ICD-10 coding), `verificationStatus` (`provisional` / `confirmed`), `encounter`, `recordedDate` |
 | `Condition` (diğer) | `conditions` | `code`, `onsetDateTime`, `note` |
 | `AllergyIntolerance` | `allergies` | `code` (ATC ya da metin), `reaction[].manifestation[].text`, `criticality` |
 | `MedicationRequest` | `medications` | `medicationCodeableConcept` (ATC), `dosageInstruction[0]`: `text`, `doseAndRate[0].doseQuantity`, `timing.repeat.timeOfDay`, `boundsPeriod` / `boundsDuration`; `authoredOn`, `status`, `groupIdentifier` |

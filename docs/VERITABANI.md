@@ -13,14 +13,14 @@ Bu belge iki veritabanını kapsar:
 
 | Kural | Açıklama |
 |---|---|
-| Birincil anahtar | `uuid`, Laravel `HasUuids` ile uygulamada üretilir (zaman sıralı UUIDv7). FHIR `id` alanı doğrudan bu değerdir; tekrarlanan aktarımlar mükerrer kayıt üretmez. İstisnalar: `access_logs` (`bigint identity`), kataloglarda doğal anahtarlar (`icd10_codes.code`, `atc_codes.code`, `settings.key`) |
+| Birincil anahtar | `uuid`, Laravel `HasUuids` ile uygulamada üretilir (zaman sıralı UUIDv7). FHIR `id` alanı doğrudan bu değerdir; tekrarlanan aktarımlar mükerrer kayıt üretmez. İstisnalar: `access_logs` (`bigint identity`), kataloglarda doğal anahtarlar (`icd11_codes.code`, `atc_codes.code`, `settings.key`) |
 | Zaman | Anlık zamanlar `timestamptz`, takvim günleri `date`. Kliniğin saat dilimi `settings.timezone` (varsayılan ülkeye göre: `Europe/Istanbul` ya da `Asia/Famagusta`) |
 | Durum alanları | PostgreSQL `enum` tipi yerine `varchar + CHECK`. Yeni değer eklemek migration ile kolay olur |
 | Silme | Klinik kayıtlar **yumuşak silinir** (`deleted_at`). Tıbbi kayıt fiziksel olarak silinmez; silme işlemi erişim loguna yazılır |
 | Kim yaptı | Klinik tablolarında `created_by` / `updated_by` (→ `users.id`) |
 | Dış kaynaklı kayıt | Başka kurumdan (başka Lokman kliniği, hastane, yurt dışı) gelen muayene, teşhis, reçete, aşı, ölçüm, alerji ve kronik hastalıklar **aynı tablolara** `source = external` ile yazılır, `verified` olarak doğar, onay kuyruğuna girmez, panelde salt okunur ve kurum adı etiketiyle gösterilir. Ortak kolonlar: `origin_name` (kurum adı), `origin_practitioner` (dış hekim adı), `origin_ref` (kaynak sistemdeki FHIR kimliği, `system|value`), `import_id` |
 | Tekrar aktarım | `origin_ref` dosyadan gelen **her** kayıtta doldurulur (`external` ve `patient_reported`). Her tabloda kısmi tekil indeks: `unique(origin_ref) WHERE origin_ref IS NOT NULL`. Aynı kayıt tekrar gelirse yeni satır açılmaz, mevcut satır güncellenir |
-| Katalogda olmayan kod | Katalog FK'leri (`icd10_code`, `type_code`) yalnızca kod katalogda varsa doldurulur. Ham kodlama her zaman `coding` (jsonb) kolonunda saklanır: `[{"system": "...", "code": "...", "display": "..."}]`. Böylece ICD-10-CM, SNOMED CT ya da bilinmeyen LOINC kodlu dış kayıtlar reddedilmez ve kayıpsız dışa aktarılır |
+| Katalogda olmayan kod | Katalog FK'leri (`icd11_code`, `type_code`) yalnızca kod katalogda varsa doldurulur. Ham kodlama her zaman `coding` (jsonb) kolonunda saklanır: `[{"system": "...", "code": "...", "display": "..."}]`. Böylece ICD-10, ICD-10-CM, SNOMED CT ya da bilinmeyen LOINC kodlu dış kayıtlar reddedilmez ve kayıpsız dışa aktarılır |
 | Anlık kopya | Katalogdan seçilen ilaç, aşı ve tanının adı ve kodu kayda **kopyalanır**. Katalog sonradan değişse de eski reçete aynı kalır |
 | Eklentiler | `pg_trgm` (Türkçe ad aramasında benzerlik), `btree_gist` (randevu çakışma kısıtı) |
 | Adlandırma | Tablo ve kolon adları İngilizce, `snake_case`, tablo adları çoğul (Laravel geleneği). Türkçe karşılıkları aşağıda |
@@ -56,8 +56,8 @@ erDiagram
 
     prescriptions ||--|{ prescription_items : "kalemler"
     medications ||--o{ prescription_items : "katalog"
-    icd10_codes ||--o{ diagnoses : "hastalık"
-    icd10_codes ||--o{ patient_conditions : ""
+    icd11_codes ||--o{ diagnoses : "hastalık"
+    icd11_codes ||--o{ patient_conditions : ""
     vaccines ||--o{ immunizations : "katalog"
     vaccines ||--o{ planned_immunizations : "katalog"
     planned_immunizations |o--o| immunizations : "yapılınca bağlanır"
@@ -67,7 +67,7 @@ erDiagram
 ```
 
 Kullanıcının ilk dokümanındaki zincirle karşılığı:
-`klinik → hasta kaydı → muayene → teşhis → hastalık` = `patients → encounters → diagnoses → icd10_codes`
+`klinik → hasta kaydı → muayene → teşhis → hastalık` = `patients → encounters → diagnoses → icd11_codes`
 `muayene → reçete → ilaç` = `encounters → prescriptions → prescription_items → medications`
 
 ---
@@ -207,7 +207,7 @@ Panelde alerji girerken madde `atc_codes` ve ilaç katalogundaki etken maddelerd
 |---|---|---|
 | id | uuid | PK |
 | patient_id | uuid | → patients |
-| icd10_code | varchar(10) null | → icd10_codes. Yalnızca kod katalogda varsa |
+| icd11_code | varchar(20) null | → icd11_codes. Yalnızca kod katalogda varsa |
 | coding | jsonb | Ham kodlama (dosyadan gelen ya da katalogda olmayan kod) |
 | description | varchar(300) | not null (kod yoksa serbest metin) |
 | onset_date | date | |
@@ -295,8 +295,8 @@ FHIR: `Encounter`. Şikayet `reasonCode`, bulgular ve plan extension olarak taş
 |---|---|---|
 | id | uuid | PK |
 | encounter_id | uuid | → encounters, cascade |
-| icd10_code | varchar(10) null | → icd10_codes (hastalık). Yalnızca kod katalogda varsa |
-| coding | jsonb | Ham kodlama. Dış kaynaklı muayenede katalogda olmayan kod (ör. ICD-10-CM) burada kalır |
+| icd11_code | varchar(20) null | → icd11_codes (hastalık). Yalnızca kod katalogda varsa |
+| coding | jsonb | Ham kodlama. Dış kaynaklı muayenede katalogda olmayan kod (ör. ICD-10, ICD-10-CM) burada kalır |
 | description | varchar(300) | not null (katalogdan kopya ya da serbest metin) |
 | rank | varchar(10) | CHECK in (`primary`, `secondary`) |
 | verification | varchar(15) | CHECK in (`provisional` ön tanı, `confirmed` kesin tanı) |
@@ -455,16 +455,23 @@ FHIR: `Observation` (LOINC kodu ve UCUM birimi türden gelir; tansiyon `componen
 
 İndeks: `gin (name gin_trgm_ops)`, `(atc_code)`
 
-### `icd10_codes`: hastalık katalogu
+### `icd11_codes`: hastalık katalogu (ICD-11 MMS)
+Lokman Terminoloji Paketi'nden yüklenir; klinikte ayrıca liste yüklenmez. Kaynak, lisans ve gerekçe: [TERMINOLOJI.md](TERMINOLOJI.md).
+
 | Kolon | Tip | Not |
 |---|---|---|
-| code | varchar(10) | PK, ör. `J03.9` |
-| name | varchar(300) | Türkçe ad |
-| name_en | varchar(300) | İngilizce ad (WHO ICD-10). Dışa aktarımda Türkçe adın yanına eklenir |
-| parent_code | varchar(10) null | → icd10_codes (bölüm, blok, kategori hiyerarşisi) |
+| code | varchar(20) | PK, ör. `CA03`. v0.1'de yalnızca temel (stem) kodlar; kod birleştirme yok |
+| name | varchar(500) | Türkçe ad (WHO resmî çevirisi; eksikse İngilizce ad gösterilir) |
+| name_en | varchar(500) | İngilizce ad |
+| parent_code | varchar(20) null | → icd11_codes (bölüm, blok, kategori hiyerarşisi) |
 | is_selectable | boolean | Yalnızca alt düzey kodlar teşhis olarak seçilebilir |
+| release | varchar(10) | ICD-11 sürümü, ör. `2026-01` |
 
-İndeks: `gin (name gin_trgm_ops)`
+İlişkili arama tablosu `icd11_search_terms` (code, term, lang, kind: `index` WHO indeks terimi | `lay` proje halk dili eş anlamlısı). ICD-11 içeriği değiştirilmez; halk dili terimleri ayrı satırlardır.
+
+FHIR: `system = http://id.who.int/icd/release/11/mms`. Dış kaynaktan gelen ICD-10 kodları `coding` kolonunda kalır; WHO eşleme tablosunun lisansı uygunsa ICD-11 karşılığı önerilir.
+
+İndeks: `gin (name gin_trgm_ops)`, `icd11_search_terms (term gin_trgm_ops)`
 
 ### `atc_codes`: alerji için ATC seçim listesi
 İlaç alerjisi girerken madde ya da ilaç grubu seçmek için kullanılır (ör. `J01C` penisilinler). **Tam ATC sınıflandırması değildir.**
@@ -541,7 +548,7 @@ Geçerlilik: `revoked_at IS NULL AND expires_at > now() AND use_count < max_uses
 | Kolon | Tip | Not |
 |---|---|---|
 | id | uuid | PK |
-| type | varchar(20) | CHECK in (`fhir_bundle`, `fhir_ips`, `titck_medications`, `icd10`, `patients_csv`) |
+| type | varchar(20) | CHECK in (`fhir_bundle`, `fhir_ips`, `titck_medications`, `patients_csv`) |
 | file_name | varchar(255) | |
 | file_sha256 | char(64) | Aynı dosya tekrar yüklenirse uyarı verilir |
 | status | varchar(20) | CHECK in (`awaiting_match` hasta eşleşmesi bekliyor, `completed`, `partial`, `failed`) |
@@ -575,7 +582,7 @@ Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. He
 | `profiles` | Aile üyeleri: id (uuid), ad, soyad, doğum tarihi, cinsiyet, kan grubu, renk/avatar. Ebeveyn çocuk profilini klinik dosyası olmadan açabilir |
 | `profile_links` | Profil ↔ klinik eşlemesi: `installation_id`, klinikteki hasta UUID'si, klinik adı. Bir profil birden çok kliniğe bağlanabilir |
 | `encounters` | Muayene: klinik, tarih, doktor, şikayet, bulgular, plan |
-| `diagnoses` | Teşhis (ICD-10 kodu, açıklama, ön/kesin) |
+| `diagnoses` | Teşhis (ICD-11 kodu ya da dosyadan gelen başka kod, açıklama, ön/kesin) |
 | `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre |
 | `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde kalır, hiçbir dışa aktarıma girmez** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
@@ -594,6 +601,7 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 ## 7. Kesinleşen tasarım kararları
 - Alerjiler ve kronik hastalıklar ayrı, yapısal tablolarda; hasta beyanı onay akışıyla.
 - Teşhiste ön tanı / kesin tanı ayrımı var (`diagnoses.verification`).
+- Hastalık ve teşhis kodlaması ICD-11 (`icd11_codes`), mobil ve klinikte aynı paketten. ICD-10 yalnızca dış kayıtlarda `coding` içinde bulunur.
 - Reçete türü (normal / kırmızı / yeşil / mor / turuncu) ve kutu adedi tutulur.
 - Muayenede hikaye, bulgular, hastaya giden öneriler (`plan`) ve iç not ayrı alanlar.
 - Protokol numarası yıl + sıra: `2026-000123` (yıl başında sıra sıfırlanır; PostgreSQL sequence + yıl).

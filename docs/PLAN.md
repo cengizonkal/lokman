@@ -59,13 +59,13 @@ flowchart LR
 | Protokol numarası | Yıl + sıra: `2026-000123` |
 | Alerji / kronik hastalık | Ayrı, yapısal tablolar. Hasta beyanı da kabul edilir (onay akışıyla). İlaç alerjisi etken madde ya da ATC koduyla kodlanır (ilaç–alerji uyarısı için) |
 | Muayene | Şikayet, hikaye, bulgular, **öneriler (hastaya gider)** ve **iç not (hastaya gitmez)** ayrı alanlar |
-| Teşhis | ICD-10, birincil/ikincil, **ön tanı / kesin tanı** |
+| Teşhis | **ICD-11** (mobil ve klinik), birincil/ikincil, **ön tanı / kesin tanı** |
 | Reçete | Reçete türü (normal / kırmızı / yeşil / mor / turuncu; ülkeye göre, bkz. 1.6), kutu adedi, doz, **kullanım saatleri**, süre ya da sürekli kullanım |
 | İlaç katalogu | Türkiye'de **TİTCK ilaç listesi**, KKTC'de KKTC ilaç listesi (Excel) panelden içe aktarılır ve güncellenir (bkz. 1.6) |
 | Aşı | Yapılan aşılar (`immunizations`) ve **planlanan aşılar** (`planned_immunizations`) ayrı tablolar. Planlanan aşılar elle ya da önceki aşının sonraki dozu olarak girilir. **Ulusal aşı takvimi kapsam dışı** |
 | Hasta beyanı | Hastanın getirdiği aşı, alerji, kronik hastalık ve ölçümler **onay kuyruğuna** düşer |
 | Dış kaynaklı kayıtlar | Başka kurumdan gelen muayene, teşhis, reçete, aşı, ölçüm, alerji ve kronik hastalıklar aynı tablolara `source = external` ile, kurum adıyla ve salt okunur eklenir. Onay kuyruğuna girmez |
-| Katalogda olmayan kod | Dışarıdan gelen ve katalogda bulunmayan kod (ör. ICD-10-CM, bilinmeyen LOINC) reddedilmez; ham kodlama kayıtta saklanır, katalog bağlantısı boş kalır |
+| Katalogda olmayan kod | Dışarıdan gelen ve katalogda bulunmayan kod (ör. ICD-10, ICD-10-CM, bilinmeyen LOINC) reddedilmez; ham kodlama kayıtta saklanır, katalog bağlantısı boş kalır |
 | Silme | Tıbbi kayıtlar yumuşak silinir; her işlem erişim loguna yazılır |
 
 ### 1.4 Aktarım (mobil ↔ klinik ↔ diğer kurumlar)
@@ -78,7 +78,7 @@ flowchart LR
 | Okunabilir özet | Her dışa aktarımla **iki dilli PDF özet** (panel ve mobil üretir) |
 | Dil | Serbest metin Türkçe. Kodlu alanlarda (teşhis, aşı, etken madde, ölçüm türü) Türkçe + İngilizce ad |
 | İlaç uyumu | "Aldım / atladım" kayıtları yalnızca mobilde kalır, dışa aktarılmaz |
-| Terminoloji | ICD-10 (teşhis), ATC (ilaç), LOINC (ölçüm), UCUM (birim), SNOMED CT GPS (aşı ve hasta listeleri). Listeler projenin **Lokman Terminoloji Paketi**nden gelir; kaynaklar ve lisans durumu: [TERMINOLOJI.md](TERMINOLOJI.md) |
+| Terminoloji | ICD-11 (teşhis; gerekçe TERMINOLOJI.md), ATC (ilaç), LOINC (ölçüm), UCUM (birim), SNOMED CT GPS (aşı ve hasta listeleri). Listeler projenin **Lokman Terminoloji Paketi**nden gelir; kaynaklar ve lisans durumu: [TERMINOLOJI.md](TERMINOLOJI.md) |
 
 ### 1.5 Mobil
 | Konu | Karar |
@@ -112,14 +112,14 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 | Hasta kaydı | Kimlik bilgileri, iletişim, acil durum kişisi, opsiyonel kimlikler, protokol no, alerjiler, kronik hastalıklar, kişisel veri rızaları |
 | Randevu | Doktor bazında günlük/haftalık takvim. Ekle, taşı, iptal et, "geldi / gelmedi". Randevudan tek tıkla muayene |
 | Muayene | Şikayet, hikaye, bulgular, öneriler, iç not, vital bulgular. Hastanın geçmişi (dış kaynaklı kayıtlar dahil) tek zaman çizelgesinde |
-| Teşhis | ICD-10 arama, birincil/ikincil, ön/kesin tanı |
+| Teşhis | ICD-11 arama (Türkçe ad, indeks terimleri, halk dili eş anlamlıları), birincil/ikincil, ön/kesin tanı |
 | Reçete | İlaç katalogundan (TİTCK / KKTC) ilaç, doz, kullanım saatleri, süre, kutu, reçete türü. **İlaç–alerji uyarısı** (etken madde / ATC eşleşmesi) |
 | Aşı | Aşı kaydı (lot, son kullanma, uygulayan), planlanan aşılar, "gecikmiş" ve "bu hafta" listeleri |
 | Ölçümler | Ölçüm girişi, normal aralık uyarısı, trend grafikleri (hastanın girdikleri dahil) |
 | Onay kuyruğu | Hasta beyanı aşı, alerji, kronik hastalık ve ölçümleri onayla/reddet |
 | Paylaşım | QR (internet), FHIR dosyası ve PDF özet indirme, aktif bağlantıları iptal |
 | İçe aktarım | FHIR dosyası yükleme, hasta eşleştirme (otomatik ya da elle / yeni hasta), içe aktarım geçmişi. Sekreter yalnızca kimlik bilgilerini ve kayıt sayılarını görür, paket içeriğini göremez |
-| Kataloglar | İlaç (TİTCK / KKTC), ICD-10, ATC alerji grupları (proje yazar; WHO listesi dağıtılmaz), aşılar, ölçüm türleri |
+| Kataloglar | İlaç (TİTCK / KKTC), ICD-11 (terminoloji paketiyle gelir), ATC alerji grupları (proje yazar; WHO listesi dağıtılmaz), aşılar, ölçüm türleri |
 | Yönetim | Kullanıcılar, roller, klinik ayarları (QR süresi, alan adı), erişim logu |
 
 ### 2.2 Rol–yetki matrisi
@@ -193,7 +193,7 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 |---|---|
 | Hasta | `Patient` |
 | Muayene | `Encounter` (bulgular ve öneriler extension ile; iç not aktarılmaz) |
-| Teşhis | `Condition` (ICD-10, `encounter-diagnosis`, ön/kesin tanı = `verificationStatus`) |
+| Teşhis | `Condition` (ICD-11, `encounter-diagnosis`, ön/kesin tanı = `verificationStatus`) |
 | Kronik hastalık | `Condition` (`problem-list-item`) |
 | Alerji | `AllergyIntolerance` |
 | Reçete kalemi | `MedicationRequest` (`groupIdentifier` ile gruplanır; saatler `timing.repeat.timeOfDay`) |
@@ -273,7 +273,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 - [ ] Migration'lar (VERITABANI.md'ye göre), seed: roller, ölçüm türleri, aşılar; ülke ayarı (`TR` / `KKTC`) ve ülkeye bağlı varsayılanlar
 - [ ] Kullanıcılar ve roller, Policy'ler, erişim logu
 - [ ] Hasta kaydı: kimlikler (kimlik no, pasaport; doğrulama yok), alerjiler, kronik hastalıklar, rızalar, Türkçe karakterli arama
-- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı (ATC sütunu ve etken maddeler dahil), KKTC ilaç listesinin kaynağını bulmak ve içe aktarımı, ICD-10 yükleme, ATC alerji grupları seed'i
+- [ ] Kataloglar: TİTCK ilaç listesi içe aktarımı (ATC sütunu ve etken maddeler dahil), KKTC ilaç listesinin kaynağını bulmak ve içe aktarımı, ATC alerji grupları seed'i (ICD-11 terminoloji paketiyle gelir, ayrıca yüklenmez)
 - [ ] Randevu takvimi (doktor kendi, sekreter tümü), çakışma kısıtı
 - [ ] Muayene, teşhis (ön/kesin), reçete (saatler, süre, tür, kutu), ilaç–alerji uyarısı (etken madde / ATC öneki eşleşmesi; kodsuz alerjide genel uyarı)
 
@@ -293,7 +293,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 - [ ] FHIR içe aktarım: hasta eşleştirme, hasta beyanı → onay kuyruğu, dış kaynaklı kayıtlar (salt okunur), katalogda olmayan kodlar, tekrar aktarımda çoğalmama
 - [ ] İçe aktarım geçmişi
 
-**Bitti sayılır:** `fhir/examples/` paketleri içe aktarılır; dışa aktarılan paket validator'dan geçer; aynı dosya iki kez aktarılınca kayıt sayısı değişmez (alerji ve kronik hastalık dahil); katalogda olmayan ICD-10 / LOINC kodlu kayıt hatasız aktarılır; sekreter paylaşım yapamaz (test ile).
+**Bitti sayılır:** `fhir/examples/` paketleri içe aktarılır; dışa aktarılan paket validator'dan geçer; aynı dosya iki kez aktarılınca kayıt sayısı değişmez (alerji ve kronik hastalık dahil); ICD-10 ya da katalogda olmayan LOINC kodlu dış kayıt hatasız aktarılır; sekreter paylaşım yapamaz (test ile).
 
 ### F4: Mobil MVP (ilk Android APK)
 - [x] Yerel veritabanı, aile profilleri (klinik dosyası olmadan da)
@@ -331,7 +331,9 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 | Risk | Önlem |
 |---|---|
 | IPS profilinin ayrıntıları (zorunlu alanlar, kod sistemleri) beklenenden katı | F0'da örnek paketleri validator'dan geçirerek sözleşmeyi erken sabitlemek |
-| TİTCK ve ICD-10 Türkçe listelerinin biçimi değişebilir / lisans koşulları | İçe aktarıcıyı esnek sütun eşlemeli yazmak; kaynak ve kullanım koşullarını F1'de doğrulamak |
+| TİTCK listesinin biçimi değişebilir / lisans koşulları | İçe aktarıcıyı esnek sütun eşlemeli yazmak; kaynak ve kullanım koşullarını F1'de doğrulamak |
+| Türkiye/KKTC doktorlarının ICD-10 alışkanlığı (ICD-11 kararı) | Güçlü Türkçe arama; eşleme tablosu lisansı uygunsa ICD-10 koduyla arama ve dışa aktarımda ICD-10 karşılığı |
+| İleride e-Nabız/SGK entegrasyonu ICD-10 isterse | Ayrı ICD-11 → ICD-10 dönüştürücü katman |
 | KKTC ilaç listesinin kaynağı ve biçimi belirsiz | F1'de araştırmak; bulunamazsa genel Excel/CSV içe aktarımı ve elle giriş |
 | WHO ATC/DDD Index'in kullanım koşulları ticari dağıtımı ve değiştirmeyi kısıtlıyor | Tam liste kullanılmaz; ilaç ATC kodları TİTCK listesinden, alerji grup adları projenin kendi seed'inden. TİTCK listesinde ATC sütunu olduğu F1'de doğrulanır; yoksa uyarı etken madde eşleşmesiyle çalışır ve ATC kodu elle girilir |
 | Android bildirim kısıtlamaları (pil optimizasyonu, tam zamanlı alarm izni) | İzin akışını açık anlatmak, gerçek cihazlarda test |
