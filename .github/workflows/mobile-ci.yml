@@ -1,0 +1,64 @@
+name: Mobil CI
+
+on:
+  push:
+    paths:
+      - 'mobile/**'
+      - 'fhir/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'fhir/**'
+      - '.github/workflows/mobile-ci.yml'
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Bağımlılıklar
+        run: flutter pub get
+
+      - name: Üretilen veritabanı kodu güncel mi?
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib
+
+      - name: Biçim
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Statik analiz
+        run: flutter analyze
+
+      - name: Testler
+        run: flutter test
+
+      - name: APK derle
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lokman-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
