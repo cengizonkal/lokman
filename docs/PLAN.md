@@ -1,6 +1,6 @@
 # Lokman — Proje Planı
 
-> Durum: **plan onaylandı (v1). Kodlamaya henüz başlanmadı.**
+> Durum: **plan onaylandı (v1).** Mobil uygulama v0.1 yazıldı (F4); klinik sistemi henüz başlanmadı.
 > Veritabanı tasarımı: [VERITABANI.md](VERITABANI.md)
 
 Lokman, özel klinikler için açık kaynak (MIT) hasta takip sistemidir ve **birbirinden bağımsız iki üründen** oluşur:
@@ -262,10 +262,10 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 ### F0: Temel ve sözleşme
 - [ ] Depo yapısı, `docker-compose.yml` (caddy, php-fpm, postgres, queue, scheduler)
 - [ ] Laravel + Filament iskeleti, PostgreSQL bağlantısı, giriş ekranı
-- [ ] Flutter iskeleti, Android derlemesi
+- [x] Flutter iskeleti, Android derlemesi
 - [ ] CI: Pint, Larastan, Pest, `flutter analyze`, `flutter test`, HL7 FHIR Validator
-- [ ] `docs/fhir-sozlesmesi.md`: alan alan eşleme, identifier kuralları, extension tanımları
-- [ ] `fhir/examples/`: Ayşe senaryosundan örnek paketler (klinik çıktısı, mobil çıktısı, çocuk profili, dış kurum kaydı)
+- [ ] `docs/fhir-sozlesmesi.md`: alan alan eşleme, identifier kuralları, extension tanımları (mobil tarafı taslak olarak yazıldı)
+- [ ] `fhir/examples/`: Ayşe senaryosundan örnek paketler (klinik çıktısı, mobil çıktısı, çocuk profili, dış kurum kaydı) (klinik çıktısı örneği eklendi)
 
 **Bitti sayılır:** `docker compose up` ile panele giriş yapılır; boş APK telefonda açılır; örnek paketler validator'dan geçer.
 
@@ -296,18 +296,18 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 **Bitti sayılır:** `fhir/examples/` paketleri içe aktarılır; dışa aktarılan paket validator'dan geçer; aynı dosya iki kez aktarılınca kayıt sayısı değişmez (alerji ve kronik hastalık dahil); katalogda olmayan ICD-10 / LOINC kodlu kayıt hatasız aktarılır; sekreter paylaşım yapamaz (test ile).
 
 ### F4: Mobil MVP (ilk Android APK)
-- [ ] Yerel veritabanı, aile profilleri (klinik dosyası olmadan da)
-- [ ] İçe aktarım: QR (internet) ve dosya, profil eşleştirme
-- [ ] Muayeneler, ilaçlar, aşılar, alerjiler, ölçümler, randevular ekranları
-- [ ] Bildirimler: doz saatleri, planlanan aşılar, randevular; aldım/atladım
-- [ ] Kullanıcı girişleri: aşı, alerji, kronik hastalık, ölçüm
-- [ ] Dışa aktarım: tüm veri / seçili kayıtlar, IPS uyumlu FHIR + PDF özet
+- [x] Yerel veritabanı, aile profilleri (klinik dosyası olmadan da)
+- [x] İçe aktarım: QR (internet) ve dosya, profil eşleştirme
+- [x] Muayeneler, ilaçlar, aşılar, alerjiler, ölçümler, randevular ekranları
+- [x] Bildirimler: doz saatleri, planlanan aşılar, randevular; aldım/atladım
+- [x] Kullanıcı girişleri: aşı, alerji, kronik hastalık, ölçüm
+- [x] Dışa aktarım: tüm veri / seçili kayıtlar, IPS uyumlu FHIR + PDF özet
 
 **Bitti sayılır:** Ayşe senaryosunun 4–6. adımları gerçek telefonda yapılır; telefondan alınan dosya panele aktarılır.
 
 ### F5: Yayın (v0.1)
 - [ ] Kişisel veri metinleri ve ekranları (Türkiye: KVKK, KKTC: kendi yasası; panel + mobil)
-- [ ] APK imzalama ve sürüm yayını
+- [ ] APK imzalama ve sürüm yayını (GitHub Actions ile otomatik sürüm yayını hazır; kalıcı imza anahtarı secret olarak eklenmeli, bkz. mobile/README.md)
 - [ ] `docs/kurulum.md`: kurulum, alan adı, yedekleme, güncelleme
 - [ ] Demo verisi
 

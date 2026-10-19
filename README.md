@@ -6,4 +6,9 @@
 - **Mobil uygulama**: Flutter (Android), hastanın kişisel sağlık defteri
 - İki ürün birbirinden bağımsızdır; yalnızca **HL7 FHIR R4** dışa/içe aktarımı (QR veya dosya) ile veri alışverişi yaparlar.
 
-Lisans: MIT. Durum: plan onaylandı, kodlamaya henüz başlanmadı — bkz. [docs/PLAN.md](docs/PLAN.md) ve [docs/VERITABANI.md](docs/VERITABANI.md).
+Lisans: MIT. Plan: [docs/PLAN.md](docs/PLAN.md), [docs/VERITABANI.md](docs/VERITABANI.md), [docs/fhir-sozlesmesi.md](docs/fhir-sozlesmesi.md).
+
+## Durum
+
+- **Mobil uygulama v0.1**: hazır. Android APK'yı [Releases](https://github.com/cengizonkal/lokman/releases) sayfasından indirin; kurulum ve geliştirme için [mobile/README.md](mobile/README.md).
+- **Klinik sistemi**: henüz başlanmadı.
