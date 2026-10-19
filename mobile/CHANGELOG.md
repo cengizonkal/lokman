@@ -1,6 +1,6 @@
 # Değişiklikler
 
-## Yayınlanmamış
+## 0.1.1
 
 - Yeni logo: kalbin içinde artı yerine hilal. Uygulama simgesi temalı (tek renkli) simge modunda da doğru görünür; karşılama ekranında da aynı logo kullanılır.
 
