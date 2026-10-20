@@ -94,6 +94,11 @@ class Diagnoses extends Table with RecordColumns {
   TextColumn get encounterId => text().nullable()();
   DateTimeColumn get date => dateTime().nullable()();
   TextColumn get code => text().nullable()();
+
+  /// [code]'un kod sistemi, FHIR `coding.system` adresiyle (ICD-11 seçilince
+  /// `http://id.who.int/icd/release/11/mms`). Dışarıdan gelen kayıtlarda
+  /// kaynağın sistemi olduğu gibi saklanır; boşsa kod serbest metindir.
+  TextColumn get codeSystem => text().nullable()();
   TextColumn get name => text()();
 
   /// `provisional` (ön tanı) ya da `confirmed` (kesin tanı).
@@ -200,6 +205,9 @@ class Allergies extends Table with RecordColumns {
 class Conditions extends Table with RecordColumns {
   TextColumn get name => text()();
   TextColumn get code => text().nullable()();
+
+  /// [code]'un kod sistemi; bkz. [Diagnoses.codeSystem].
+  TextColumn get codeSystem => text().nullable()();
   DateTimeColumn get onsetDate => dateTime().nullable()();
 
   /// [ConditionStatus] değerlerinden biri.

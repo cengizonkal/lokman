@@ -7,6 +7,10 @@ abstract final class FhirSystems {
   static const loinc = 'http://loinc.org';
   static const ucum = 'http://unitsofmeasure.org';
   static const icd10 = 'http://hl7.org/fhir/sid/icd-10';
+  static const icd10cm = 'http://hl7.org/fhir/sid/icd-10-cm';
+
+  /// ICD-11 MMS (hastalık ve tanı kodları; bkz. docs/TERMINOLOJI.md §3).
+  static const icd11 = 'http://id.who.int/icd/release/11/mms';
   static const atc = 'http://www.whocc.no/atc';
   static const conditionCategory =
       'http://terminology.hl7.org/CodeSystem/condition-category';
@@ -107,6 +111,31 @@ String? conceptCode(Object? concept, [String? system]) {
     }
   }
   return null;
+}
+
+/// Kod sisteminin kullanıcıya gösterilen kısa adı; tanınmayan sistemde boş.
+String? codeSystemLabel(String? system) => switch (system) {
+  FhirSystems.icd11 => 'ICD-11',
+  FhirSystems.icd10 => 'ICD-10',
+  FhirSystems.icd10cm => 'ICD-10-CM',
+  FhirSystems.atc => 'ATC',
+  FhirSystems.loinc => 'LOINC',
+  _ => null,
+};
+
+/// CodeableConcept içinden tercih edilen kodlama: [systems] sırayla denenir,
+/// hiçbiri yoksa koda sahip ilk kodlama döner (dışarıdan gelen, katalogda
+/// olmayan sistemler de kaybolmaz).
+Json? preferredCoding(Object? concept, List<String> systems) {
+  final codings = asMapList(asMap(concept)?['coding'])
+      .where((c) => asString(c['code']) != null)
+      .toList();
+  for (final system in systems) {
+    for (final coding in codings) {
+      if (coding['system'] == system) return coding;
+    }
+  }
+  return codings.firstOrNull;
 }
 
 bool conceptHas(Object? concept, String system, String code) =>

@@ -11,6 +11,7 @@ import '../../app/format.dart';
 import '../../app/providers.dart';
 import '../../data/db/database.dart';
 import '../../data/repository.dart';
+import '../../domain/terminology/icd11.dart';
 import '../../fhir/bundle_reader.dart';
 import '../../fhir/bundle_writer.dart';
 import '../../pdf/summary_pdf.dart';
@@ -226,7 +227,19 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       final repo = ref.read(repositoryProvider);
       final profileId = _profileId ?? ref.read(currentProfileProvider)!.id;
       final data = await ExportData.load(repo.db, profileId, kinds: _kinds);
-      final bundle = buildBundle(data, appId: await repo.appId());
+      // Katalog, ICD-11 kodlarına resmî adı ve ICD-10 karşılığını ekler.
+      Icd11Catalog? catalog;
+      try {
+        catalog = await ref.read(icd11Provider.future);
+      } on Object {
+        // Paket okunamadı: kodlar yine sistemleriyle yazılır, paket geçerli
+        // kalır, yalnızca zenginleştirme atlanır.
+      }
+      final bundle = buildBundle(
+        data,
+        appId: await repo.appId(),
+        icd11: catalog,
+      );
       final pdf = await buildSummaryPdf(data, await PdfFonts.load());
 
       final dir = Directory(

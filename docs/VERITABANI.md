@@ -583,17 +583,19 @@ Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. He
 | `profiles` | Aile üyeleri: id (uuid), ad, soyad, doğum tarihi, cinsiyet, kan grubu, renk/avatar. Ebeveyn çocuk profilini klinik dosyası olmadan açabilir |
 | `profile_links` | Profil ↔ klinik eşlemesi: `installation_id`, klinikteki hasta UUID'si, klinik adı. Bir profil birden çok kliniğe bağlanabilir |
 | `encounters` | Muayene: klinikten gelenler ve kullanıcının kendi eklediği doktor ziyaretleri. Tarih, hastane/klinik (`location`), doktor, şikayet, bulgular, öneriler, kullanıcının notu (`note`) |
-| `diagnoses` | Teşhis (ICD-11 kodu ya da dosyadan gelen başka kod, açıklama, ön/kesin) |
+| `diagnoses` | Teşhis: ad, `code` + `code_system` (kullanıcı katalogdan seçtiyse ICD-11 MMS, dosyadan gelenlerde kaynağın sistemi), ön/kesin (`verification`), bağlı muayene |
 | `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre. `encounter_id`: ilacın yazıldığı muayene/ziyaret |
 | `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde kalır, hiçbir dışa aktarıma girmez** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
 | `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları |
 | `observations` | Ölçümler (klinikten gelen + hastanın girdiği) |
 | `appointments` | Klinikten gelen gelecek randevular |
-| `allergies`, `conditions` | Alerjiler, devam eden ve geçirilmiş hastalıklar (`conditions.status`: `active` / `resolved`, `resolved_date`). `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
+| `allergies`, `conditions` | Alerjiler, devam eden ve geçirilmiş hastalıklar (`conditions.status`: `active` / `resolved`, `resolved_date`; `code` + `code_system` tanı ile aynı kuralda). `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
 | `fhir_resources` | Her kaynağın ham FHIR JSON'u (`resource_type`, `id`, `profile_id`, `json`, `last_updated`). Kayıpsız dışa aktarım ve ileride yeni alanlar için |
 | `import_history` | Ne zaman, hangi klinikten, kaç kayıt geldi |
-| `app_settings` | Uygulama kurulum kimliği, bildirim tercihleri, son tam dışa aktarım zamanı (yedek hatırlatması için) |
+| `app_settings` | Uygulama kurulum kimliği, bildirim tercihleri, son tam dışa aktarım zamanı (yedek hatırlatması için), kodsuz kayıtların eşleştirildiği terminoloji paketi sürümü |
+
+Hastalık ve tanı kataloğu veritabanında değil, uygulamanın varlıklarında gömülü düz metin olarak durur (`mobile/assets/terminology/`, bkz. [TERMINOLOJI.md](TERMINOLOJI.md)): tablolarda yalnızca seçilen kod ve kod sistemi tutulur, katalog FK'si yoktur. Paket yenilendiğinde kullanıcının kodsuz kayıtları bir kez taranıp adı birebir eşleşenlere kod yazılır.
 
 Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.times_of_day` ile doz bildirimleri, `immunization_due` ile aşı bildirimleri, `appointments` ile randevu bildirimleri.
 
@@ -609,7 +611,7 @@ Bildirimler bu tablolardan hesaplanır ve cihazda zamanlanır: `medications.time
 - Kimlik numaraları (TCKN, KKTC kimlik no vb.) tek bir `national_id` türüyle, doğrulamasız ve düz saklanır (arama için). Koruma veritabanı/disk düzeyinde şifreleme, rol bazlı erişim ve erişim logu ile sağlanır.
 - Başka kurumdan gelen kayıtlar aynı tablolara `source = external` ile eklenir; onay kuyruğuna girmez. Yalnızca hasta beyanı onay bekler.
 - Dosyadan gelen her kayıtta `origin_ref` tutulur ve tekildir; tekrar aktarım kayıt çoğaltmaz (alerji ve kronik hastalık dahil).
-- Katalogda olmayan kodlar reddedilmez; ham kodlama `coding` kolonunda saklanır, katalog FK'si boş kalır.
+- Katalogda olmayan kodlar reddedilmez; ham kodlama `coding` kolonunda saklanır, katalog FK'si boş kalır. Mobilde aynı kural kod + kod sistemi çiftiyle işler.
 - İlaç alerjisi ATC kodu / etken maddeyle kodlanır; ilaç–alerji uyarısı ATC öneki ve etken madde eşleşmesiyle çalışır.
 - WHO ATC/DDD Index dağıtılmaz. `atc_codes` yalnızca projenin yazdığı alerji grupları ile TİTCK listesinden türetilen etken maddeleri içerir.
 - Sekreter klinik içeriği göremez ve dışa aktaramaz; içe aktarımda yalnızca hasta eşleştirmesi yapar.

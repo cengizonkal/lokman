@@ -68,14 +68,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
-class _Welcome extends StatelessWidget {
+class _Welcome extends ConsumerWidget {
   const _Welcome({required this.onNext});
 
   final VoidCallback onNext;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final version = ref.watch(appVersionProvider).value ?? '';
     Widget point(IconData icon, String title, String text) => Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -131,6 +132,16 @@ class _Welcome extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (version.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sürüm $version',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 const SizedBox(height: 40),
                 point(
                   Icons.alarm,

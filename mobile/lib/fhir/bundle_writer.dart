@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../data/db/database.dart';
 import '../domain/catalog.dart';
 import '../domain/dose_schedule.dart';
+import '../domain/terminology/icd11.dart';
 import 'bundle_reader.dart' show RecordKind;
 import 'fhir_common.dart';
 
@@ -86,21 +87,30 @@ class ExportData {
 }
 
 /// Profil verisinden IPS uyumlu FHIR R4 belge paketi (Bundle) üretir.
-Json buildBundle(ExportData data, {required String appId, DateTime? now}) =>
-    _BundleWriter(data, appId, now ?? DateTime.now()).build();
+///
+/// [icd11] verilirse ICD-11 kodlu hastalık ve tanılara resmî ad (`display`)
+/// ve WHO eşleme tablosundaki ICD-10 karşılığı ikincil kodlama olarak eklenir
+/// (bkz. docs/fhir-sozlesmesi.md §3 "Hastalık ve tanı kodları").
+Json buildBundle(
+  ExportData data, {
+  required String appId,
+  DateTime? now,
+  Icd11Catalog? icd11,
+}) => _BundleWriter(data, appId, now ?? DateTime.now(), icd11).build();
 
 String encodeBundle(Json bundle) =>
     const JsonEncoder.withIndent('  ').convert(bundle);
 
 final _atcPattern = RegExp(r'^[A-Z]\d{2}([A-Z]{1,2}(\d{2})?)?$');
-final _icdPattern = RegExp(r'^[A-Z]\d{2}(\.\d{1,4})?$');
+final _icd10Pattern = RegExp(r'^[A-Z]\d{2}(\.\d{1,4})?$');
 
 class _BundleWriter {
-  _BundleWriter(this.data, this.appId, this.now);
+  _BundleWriter(this.data, this.appId, this.now, this.icd11);
 
   final ExportData data;
   final String appId;
   final DateTime now;
+  final Icd11Catalog? icd11;
 
   final _entries = <Json>[];
 
@@ -302,6 +312,26 @@ class _BundleWriter {
     return concept(system: known ? system : null, code: code, text: text);
   }
 
+  /// Hastalık / tanı kodu. Kod sistemi kayıtta saklıdır; dışarıdan gelen
+  /// tanınmayan sistemler de olduğu gibi yazılır. ICD-11 kodlarında resmî ad
+  /// ve varsa ICD-10 karşılığı ikincil kodlama olarak eklenir.
+  Json? _diagnosisCode(String? code, String? system, String? text) {
+    if (code == null) return text == null ? null : {'text': text};
+    final known = system == FhirSystems.icd11 ? icd11?.byCode(code) : null;
+    // Eşleme tablosu kod yerine aralık ('J09-J18') ya da bölüm ('IX')
+    // verebilir; bunlar ICD-10 kodu değildir, yazılmaz.
+    final icd10 = known != null && _icd10Pattern.hasMatch(known.icd10)
+        ? known.icd10
+        : null;
+    return {
+      'coding': [
+        {'system': ?system, 'code': code, 'display': ?known?.titleTr},
+        if (icd10 != null) {'system': FhirSystems.icd10, 'code': icd10},
+      ],
+      'text': ?text,
+    };
+  }
+
   _Item _allergy(Allergy a) =>
       _add('AllergyIntolerance', a.id, a.source, a.originName, a.originRef, {
         'clinicalStatus': {
@@ -349,7 +379,7 @@ class _BundleWriter {
             ],
           },
         ],
-        'code': _code(c.code, _icdPattern, FhirSystems.icd10, c.name),
+        'code': _diagnosisCode(c.code, c.codeSystem, c.name),
         'subject': _patientRef,
         if (c.onsetDate != null) 'onsetDateTime': fhirDate(c.onsetDate!),
         if (c.status == ConditionStatus.resolved && c.resolvedDate != null)
@@ -382,7 +412,7 @@ class _BundleWriter {
             ],
           },
         ],
-        'code': _code(d.code, _icdPattern, FhirSystems.icd10, d.name),
+        'code': _diagnosisCode(d.code, d.codeSystem, d.name),
         'subject': _patientRef,
         if (d.encounterId != null && encounterIds.contains(d.encounterId))
           'encounter': {'reference': 'urn:uuid:${d.encounterId}'},

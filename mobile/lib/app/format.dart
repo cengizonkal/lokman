@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 
 import '../domain/dose_schedule.dart';
-import '../fhir/fhir_common.dart' show fmtNumber;
+import '../fhir/fhir_common.dart' show codeSystemLabel, fmtNumber;
 import '../data/db/database.dart';
 
 final _day = DateFormat('d MMMM y', 'tr');
@@ -31,6 +31,11 @@ String relativeDay(DateTime d, DateTime now) {
     _ => _day.format(d),
   };
 }
+
+/// Kodu sistemiyle gösterir: "ICD-11 BA00". Kod yoksa null, sistem
+/// tanınmıyorsa yalnızca kod.
+String? formatCode(String? code, String? system) =>
+    code == null ? null : [?codeSystemLabel(system), code].join(' ');
 
 String profileName(Profile p) =>
     [p.firstName, p.lastName].where((s) => s.isNotEmpty).join(' ');

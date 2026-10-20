@@ -1751,6 +1751,17 @@ class $DiagnosesTable extends Diagnoses
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _codeSystemMeta = const VerificationMeta(
+    'codeSystem',
+  );
+  @override
+  late final GeneratedColumn<String> codeSystem = GeneratedColumn<String>(
+    'code_system',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -1783,6 +1794,7 @@ class $DiagnosesTable extends Diagnoses
     encounterId,
     date,
     code,
+    codeSystem,
     name,
     verification,
   ];
@@ -1854,6 +1866,12 @@ class $DiagnosesTable extends Diagnoses
         code.isAcceptableOrUnknown(data['code']!, _codeMeta),
       );
     }
+    if (data.containsKey('code_system')) {
+      context.handle(
+        _codeSystemMeta,
+        codeSystem.isAcceptableOrUnknown(data['code_system']!, _codeSystemMeta),
+      );
+    }
     if (data.containsKey('name')) {
       context.handle(
         _nameMeta,
@@ -1916,6 +1934,10 @@ class $DiagnosesTable extends Diagnoses
         DriftSqlType.string,
         data['${effectivePrefix}code'],
       ),
+      codeSystem: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_system'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -1948,6 +1970,11 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
   final String? encounterId;
   final DateTime? date;
   final String? code;
+
+  /// [code]'un kod sistemi, FHIR `coding.system` adresiyle (ICD-11 seçilince
+  /// `http://id.who.int/icd/release/11/mms`). Dışarıdan gelen kayıtlarda
+  /// kaynağın sistemi olduğu gibi saklanır; boşsa kod serbest metindir.
+  final String? codeSystem;
   final String name;
 
   /// `provisional` (ön tanı) ya da `confirmed` (kesin tanı).
@@ -1962,6 +1989,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
     this.encounterId,
     this.date,
     this.code,
+    this.codeSystem,
     required this.name,
     required this.verification,
   });
@@ -1987,6 +2015,9 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
     if (!nullToAbsent || code != null) {
       map['code'] = Variable<String>(code);
     }
+    if (!nullToAbsent || codeSystem != null) {
+      map['code_system'] = Variable<String>(codeSystem);
+    }
     map['name'] = Variable<String>(name);
     map['verification'] = Variable<String>(verification);
     return map;
@@ -2009,6 +2040,9 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
           : Value(encounterId),
       date: date == null && nullToAbsent ? const Value.absent() : Value(date),
       code: code == null && nullToAbsent ? const Value.absent() : Value(code),
+      codeSystem: codeSystem == null && nullToAbsent
+          ? const Value.absent()
+          : Value(codeSystem),
       name: Value(name),
       verification: Value(verification),
     );
@@ -2029,6 +2063,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
       encounterId: serializer.fromJson<String?>(json['encounterId']),
       date: serializer.fromJson<DateTime?>(json['date']),
       code: serializer.fromJson<String?>(json['code']),
+      codeSystem: serializer.fromJson<String?>(json['codeSystem']),
       name: serializer.fromJson<String>(json['name']),
       verification: serializer.fromJson<String>(json['verification']),
     );
@@ -2046,6 +2081,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
       'encounterId': serializer.toJson<String?>(encounterId),
       'date': serializer.toJson<DateTime?>(date),
       'code': serializer.toJson<String?>(code),
+      'codeSystem': serializer.toJson<String?>(codeSystem),
       'name': serializer.toJson<String>(name),
       'verification': serializer.toJson<String>(verification),
     };
@@ -2061,6 +2097,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
     Value<String?> encounterId = const Value.absent(),
     Value<DateTime?> date = const Value.absent(),
     Value<String?> code = const Value.absent(),
+    Value<String?> codeSystem = const Value.absent(),
     String? name,
     String? verification,
   }) => Diagnosis(
@@ -2073,6 +2110,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
     encounterId: encounterId.present ? encounterId.value : this.encounterId,
     date: date.present ? date.value : this.date,
     code: code.present ? code.value : this.code,
+    codeSystem: codeSystem.present ? codeSystem.value : this.codeSystem,
     name: name ?? this.name,
     verification: verification ?? this.verification,
   );
@@ -2091,6 +2129,9 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
           : this.encounterId,
       date: data.date.present ? data.date.value : this.date,
       code: data.code.present ? data.code.value : this.code,
+      codeSystem: data.codeSystem.present
+          ? data.codeSystem.value
+          : this.codeSystem,
       name: data.name.present ? data.name.value : this.name,
       verification: data.verification.present
           ? data.verification.value
@@ -2110,6 +2151,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
           ..write('encounterId: $encounterId, ')
           ..write('date: $date, ')
           ..write('code: $code, ')
+          ..write('codeSystem: $codeSystem, ')
           ..write('name: $name, ')
           ..write('verification: $verification')
           ..write(')'))
@@ -2127,6 +2169,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
     encounterId,
     date,
     code,
+    codeSystem,
     name,
     verification,
   );
@@ -2143,6 +2186,7 @@ class Diagnosis extends DataClass implements Insertable<Diagnosis> {
           other.encounterId == this.encounterId &&
           other.date == this.date &&
           other.code == this.code &&
+          other.codeSystem == this.codeSystem &&
           other.name == this.name &&
           other.verification == this.verification);
 }
@@ -2157,6 +2201,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
   final Value<String?> encounterId;
   final Value<DateTime?> date;
   final Value<String?> code;
+  final Value<String?> codeSystem;
   final Value<String> name;
   final Value<String> verification;
   final Value<int> rowid;
@@ -2170,6 +2215,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
     this.encounterId = const Value.absent(),
     this.date = const Value.absent(),
     this.code = const Value.absent(),
+    this.codeSystem = const Value.absent(),
     this.name = const Value.absent(),
     this.verification = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2184,6 +2230,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
     this.encounterId = const Value.absent(),
     this.date = const Value.absent(),
     this.code = const Value.absent(),
+    this.codeSystem = const Value.absent(),
     required String name,
     this.verification = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2199,6 +2246,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
     Expression<String>? encounterId,
     Expression<DateTime>? date,
     Expression<String>? code,
+    Expression<String>? codeSystem,
     Expression<String>? name,
     Expression<String>? verification,
     Expression<int>? rowid,
@@ -2213,6 +2261,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
       if (encounterId != null) 'encounter_id': encounterId,
       if (date != null) 'date': date,
       if (code != null) 'code': code,
+      if (codeSystem != null) 'code_system': codeSystem,
       if (name != null) 'name': name,
       if (verification != null) 'verification': verification,
       if (rowid != null) 'rowid': rowid,
@@ -2229,6 +2278,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
     Value<String?>? encounterId,
     Value<DateTime?>? date,
     Value<String?>? code,
+    Value<String?>? codeSystem,
     Value<String>? name,
     Value<String>? verification,
     Value<int>? rowid,
@@ -2243,6 +2293,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
       encounterId: encounterId ?? this.encounterId,
       date: date ?? this.date,
       code: code ?? this.code,
+      codeSystem: codeSystem ?? this.codeSystem,
       name: name ?? this.name,
       verification: verification ?? this.verification,
       rowid: rowid ?? this.rowid,
@@ -2279,6 +2330,9 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
     if (code.present) {
       map['code'] = Variable<String>(code.value);
     }
+    if (codeSystem.present) {
+      map['code_system'] = Variable<String>(codeSystem.value);
+    }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
@@ -2303,6 +2357,7 @@ class DiagnosesCompanion extends UpdateCompanion<Diagnosis> {
           ..write('encounterId: $encounterId, ')
           ..write('date: $date, ')
           ..write('code: $code, ')
+          ..write('codeSystem: $codeSystem, ')
           ..write('name: $name, ')
           ..write('verification: $verification, ')
           ..write('rowid: $rowid')
@@ -7268,6 +7323,17 @@ class $ConditionsTable extends Conditions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _codeSystemMeta = const VerificationMeta(
+    'codeSystem',
+  );
+  @override
+  late final GeneratedColumn<String> codeSystem = GeneratedColumn<String>(
+    'code_system',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _onsetDateMeta = const VerificationMeta(
     'onsetDate',
   );
@@ -7319,6 +7385,7 @@ class $ConditionsTable extends Conditions
     createdAt,
     name,
     code,
+    codeSystem,
     onsetDate,
     status,
     resolvedDate,
@@ -7383,6 +7450,12 @@ class $ConditionsTable extends Conditions
       context.handle(
         _codeMeta,
         code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    }
+    if (data.containsKey('code_system')) {
+      context.handle(
+        _codeSystemMeta,
+        codeSystem.isAcceptableOrUnknown(data['code_system']!, _codeSystemMeta),
       );
     }
     if (data.containsKey('onset_date')) {
@@ -7453,6 +7526,10 @@ class $ConditionsTable extends Conditions
         DriftSqlType.string,
         data['${effectivePrefix}code'],
       ),
+      codeSystem: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_system'],
+      ),
       onsetDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}onset_date'],
@@ -7492,6 +7569,9 @@ class Condition extends DataClass implements Insertable<Condition> {
   final DateTime createdAt;
   final String name;
   final String? code;
+
+  /// [code]'un kod sistemi; bkz. [Diagnoses.codeSystem].
+  final String? codeSystem;
   final DateTime? onsetDate;
 
   /// [ConditionStatus] değerlerinden biri.
@@ -7509,6 +7589,7 @@ class Condition extends DataClass implements Insertable<Condition> {
     required this.createdAt,
     required this.name,
     this.code,
+    this.codeSystem,
     this.onsetDate,
     required this.status,
     this.resolvedDate,
@@ -7530,6 +7611,9 @@ class Condition extends DataClass implements Insertable<Condition> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || code != null) {
       map['code'] = Variable<String>(code);
+    }
+    if (!nullToAbsent || codeSystem != null) {
+      map['code_system'] = Variable<String>(codeSystem);
     }
     if (!nullToAbsent || onsetDate != null) {
       map['onset_date'] = Variable<DateTime>(onsetDate);
@@ -7558,6 +7642,9 @@ class Condition extends DataClass implements Insertable<Condition> {
       createdAt: Value(createdAt),
       name: Value(name),
       code: code == null && nullToAbsent ? const Value.absent() : Value(code),
+      codeSystem: codeSystem == null && nullToAbsent
+          ? const Value.absent()
+          : Value(codeSystem),
       onsetDate: onsetDate == null && nullToAbsent
           ? const Value.absent()
           : Value(onsetDate),
@@ -7583,6 +7670,7 @@ class Condition extends DataClass implements Insertable<Condition> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       name: serializer.fromJson<String>(json['name']),
       code: serializer.fromJson<String?>(json['code']),
+      codeSystem: serializer.fromJson<String?>(json['codeSystem']),
       onsetDate: serializer.fromJson<DateTime?>(json['onsetDate']),
       status: serializer.fromJson<String>(json['status']),
       resolvedDate: serializer.fromJson<DateTime?>(json['resolvedDate']),
@@ -7601,6 +7689,7 @@ class Condition extends DataClass implements Insertable<Condition> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'name': serializer.toJson<String>(name),
       'code': serializer.toJson<String?>(code),
+      'codeSystem': serializer.toJson<String?>(codeSystem),
       'onsetDate': serializer.toJson<DateTime?>(onsetDate),
       'status': serializer.toJson<String>(status),
       'resolvedDate': serializer.toJson<DateTime?>(resolvedDate),
@@ -7617,6 +7706,7 @@ class Condition extends DataClass implements Insertable<Condition> {
     DateTime? createdAt,
     String? name,
     Value<String?> code = const Value.absent(),
+    Value<String?> codeSystem = const Value.absent(),
     Value<DateTime?> onsetDate = const Value.absent(),
     String? status,
     Value<DateTime?> resolvedDate = const Value.absent(),
@@ -7630,6 +7720,7 @@ class Condition extends DataClass implements Insertable<Condition> {
     createdAt: createdAt ?? this.createdAt,
     name: name ?? this.name,
     code: code.present ? code.value : this.code,
+    codeSystem: codeSystem.present ? codeSystem.value : this.codeSystem,
     onsetDate: onsetDate.present ? onsetDate.value : this.onsetDate,
     status: status ?? this.status,
     resolvedDate: resolvedDate.present ? resolvedDate.value : this.resolvedDate,
@@ -7647,6 +7738,9 @@ class Condition extends DataClass implements Insertable<Condition> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       name: data.name.present ? data.name.value : this.name,
       code: data.code.present ? data.code.value : this.code,
+      codeSystem: data.codeSystem.present
+          ? data.codeSystem.value
+          : this.codeSystem,
       onsetDate: data.onsetDate.present ? data.onsetDate.value : this.onsetDate,
       status: data.status.present ? data.status.value : this.status,
       resolvedDate: data.resolvedDate.present
@@ -7667,6 +7761,7 @@ class Condition extends DataClass implements Insertable<Condition> {
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
           ..write('code: $code, ')
+          ..write('codeSystem: $codeSystem, ')
           ..write('onsetDate: $onsetDate, ')
           ..write('status: $status, ')
           ..write('resolvedDate: $resolvedDate, ')
@@ -7685,6 +7780,7 @@ class Condition extends DataClass implements Insertable<Condition> {
     createdAt,
     name,
     code,
+    codeSystem,
     onsetDate,
     status,
     resolvedDate,
@@ -7702,6 +7798,7 @@ class Condition extends DataClass implements Insertable<Condition> {
           other.createdAt == this.createdAt &&
           other.name == this.name &&
           other.code == this.code &&
+          other.codeSystem == this.codeSystem &&
           other.onsetDate == this.onsetDate &&
           other.status == this.status &&
           other.resolvedDate == this.resolvedDate &&
@@ -7717,6 +7814,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
   final Value<DateTime> createdAt;
   final Value<String> name;
   final Value<String?> code;
+  final Value<String?> codeSystem;
   final Value<DateTime?> onsetDate;
   final Value<String> status;
   final Value<DateTime?> resolvedDate;
@@ -7731,6 +7829,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     this.createdAt = const Value.absent(),
     this.name = const Value.absent(),
     this.code = const Value.absent(),
+    this.codeSystem = const Value.absent(),
     this.onsetDate = const Value.absent(),
     this.status = const Value.absent(),
     this.resolvedDate = const Value.absent(),
@@ -7746,6 +7845,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     this.createdAt = const Value.absent(),
     required String name,
     this.code = const Value.absent(),
+    this.codeSystem = const Value.absent(),
     this.onsetDate = const Value.absent(),
     this.status = const Value.absent(),
     this.resolvedDate = const Value.absent(),
@@ -7762,6 +7862,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     Expression<DateTime>? createdAt,
     Expression<String>? name,
     Expression<String>? code,
+    Expression<String>? codeSystem,
     Expression<DateTime>? onsetDate,
     Expression<String>? status,
     Expression<DateTime>? resolvedDate,
@@ -7777,6 +7878,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
       if (createdAt != null) 'created_at': createdAt,
       if (name != null) 'name': name,
       if (code != null) 'code': code,
+      if (codeSystem != null) 'code_system': codeSystem,
       if (onsetDate != null) 'onset_date': onsetDate,
       if (status != null) 'status': status,
       if (resolvedDate != null) 'resolved_date': resolvedDate,
@@ -7794,6 +7896,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     Value<DateTime>? createdAt,
     Value<String>? name,
     Value<String?>? code,
+    Value<String?>? codeSystem,
     Value<DateTime?>? onsetDate,
     Value<String>? status,
     Value<DateTime?>? resolvedDate,
@@ -7809,6 +7912,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
       createdAt: createdAt ?? this.createdAt,
       name: name ?? this.name,
       code: code ?? this.code,
+      codeSystem: codeSystem ?? this.codeSystem,
       onsetDate: onsetDate ?? this.onsetDate,
       status: status ?? this.status,
       resolvedDate: resolvedDate ?? this.resolvedDate,
@@ -7844,6 +7948,9 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     if (code.present) {
       map['code'] = Variable<String>(code.value);
     }
+    if (codeSystem.present) {
+      map['code_system'] = Variable<String>(codeSystem.value);
+    }
     if (onsetDate.present) {
       map['onset_date'] = Variable<DateTime>(onsetDate.value);
     }
@@ -7873,6 +7980,7 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
           ..write('createdAt: $createdAt, ')
           ..write('name: $name, ')
           ..write('code: $code, ')
+          ..write('codeSystem: $codeSystem, ')
           ..write('onsetDate: $onsetDate, ')
           ..write('status: $status, ')
           ..write('resolvedDate: $resolvedDate, ')

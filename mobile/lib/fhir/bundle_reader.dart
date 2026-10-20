@@ -364,8 +364,15 @@ class _BundleReader {
   List<_Row>? _condition(Json r, _Origin o) {
     final name = conceptText(r['code']);
     if (name == null) return null;
-    final code =
-        conceptCode(r['code'], FhirSystems.icd10) ?? conceptCode(r['code']);
+    // Önce ICD-11, sonra ICD-10; ikisi de yoksa ilk kodlama. Tanınmayan
+    // sistemler de sistemiyle birlikte saklanır (kayıpsız içe aktarım).
+    final coding = preferredCoding(r['code'], const [
+      FhirSystems.icd11,
+      FhirSystems.icd10,
+      FhirSystems.icd10cm,
+    ]);
+    final code = asString(coding?['code']);
+    final codeSystem = asString(coding?['system']);
     final isDiagnosis = asMapList(r['category']).any(
       (c) =>
           conceptHas(c, FhirSystems.conditionCategory, 'encounter-diagnosis'),
@@ -391,6 +398,7 @@ class _BundleReader {
             encounterId: Value(c.resolve(encounterRef)),
             date: Value(date),
             code: Value(code),
+            codeSystem: Value(codeSystem),
             name: name,
             verification: Value(provisional ? 'provisional' : 'confirmed'),
           );
@@ -418,6 +426,7 @@ class _BundleReader {
           originRef: Value(c.originRef),
           name: name,
           code: Value(code),
+          codeSystem: Value(codeSystem),
           onsetDate: Value(parseFhirDate(r['onsetDateTime'])),
           status: Value(
             resolved ? ConditionStatus.resolved : ConditionStatus.active,

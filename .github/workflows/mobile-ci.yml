@@ -5,11 +5,13 @@ on:
     paths:
       - 'mobile/**'
       - 'fhir/**'
+      - 'terminology/**'
       - '.github/workflows/mobile-ci.yml'
   pull_request:
     paths:
       - 'mobile/**'
       - 'fhir/**'
+      - 'terminology/**'
       - '.github/workflows/mobile-ci.yml'
 
 concurrency:
@@ -17,6 +19,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Uygulamaya gömülü terminoloji paketi, WHO sürüm dosyalarından yeniden
+  # üretildiğinde aynı çıkıyor mu? (WHO dosyalarını indirir; sunucuya
+  # erişilemezse bu iş düşer, uygulama derlemesi etkilenmez.)
+  terminology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Paket güncel mi?
+        run: python3 terminology/build.py --check
+
   test-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 45

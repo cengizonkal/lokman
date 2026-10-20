@@ -9,7 +9,9 @@ Lokman is an open-source patient tracking system for private clinics, made of **
 - `mobile/` — Flutter/Android app, the patient's personal health record. **This is the only code that exists today** (v0.1 shipped).
 - `backend/` — Laravel + Filament + PostgreSQL clinic system. **Not started.** Planned in `docs/PLAN.md` §2 and `docs/VERITABANI.md` §1–5.
 
-The only link between them is **HL7 FHIR R4 (IPS-compliant) JSON**, exchanged by QR link or file. `fhir/examples/` holds the shared contract fixtures that both sides' tests consume.
+- `terminology/` — the **Lokman Terminology Package** builder: `build.py` turns WHO ICD-11 MMS release files into the assets committed under `mobile/assets/terminology/` (both products are meant to consume the same package; only mobile does today).
+
+The only link between the two products is **HL7 FHIR R4 (IPS-compliant) JSON**, exchanged by QR link or file. `fhir/examples/` holds the shared contract fixtures that both sides' tests consume.
 
 ## Language conventions
 
@@ -24,7 +26,7 @@ The only link between them is **HL7 FHIR R4 (IPS-compliant) JSON**, exchanged by
 - `docs/PLAN.md` — architecture decisions, role/permission matrix, phased work plan (F0–F5) with checkboxes. Tick boxes when a phase item lands.
 - `docs/VERITABANI.md` — both databases' schema design (PostgreSQL §1–5, mobile SQLite §6).
 - `docs/fhir-sozlesmesi.md` — the field-by-field FHIR contract: Composition sections, identifier systems, origin-ref rules, resource mapping. **Any change to `mobile/lib/fhir/` must be reflected here**, because the unwritten backend will be built against this document.
-- `docs/TERMINOLOJI.md` — terminology package decisions (ICD-11 for diagnoses, ATC, LOINC/UCUM, SNOMED GPS) and the license research behind them. ICD-11 was chosen over ICD-10 specifically because its license permits redistribution inside an MIT-licensed app.
+- `docs/TERMINOLOJI.md` — terminology package decisions (ICD-11 for diagnoses, ATC, LOINC/UCUM, SNOMED GPS) and the license research behind them. ICD-11 was chosen over ICD-10 specifically because its license permits redistribution inside an MIT-licensed app. The ICD-11 half is now built and shipped; `terminology/README.md` documents the package itself and `terminology/LICENSES.md` carries the attribution WHO's CC BY-ND licence requires (the app shows it via `LicenseRegistry`).
 
 ## Mobile app
 
@@ -43,7 +45,27 @@ flutter test test/fhir_import_test.dart --plain-name 'ad'   # one test by name
 flutter run
 flutter build apk --release
 python3 branding/render_icons.py                            # regenerate logo SVG + launcher PNGs
+python3 ../terminology/build.py                             # regenerate the terminology assets
+python3 ../terminology/build.py --check                     # are the committed assets current? (CI)
 ```
+
+### Terminology package
+
+`mobile/assets/terminology/` is **generated, committed and never hand-edited**:
+`icd11-mms-<release>.tsv` (17k ICD-11 MMS categories with Turkish titles,
+project-written colloquial synonyms and the ICD-10 equivalent),
+`icd10-icd11-<release>.tsv` (WHO mapping) and `LISANS.txt` (attribution shown
+in the app). `mobile/lib/domain/terminology/icd11.dart` reads them: search
+is tiered (exact → prefix → word start → substring) over a pre-normalized
+column, so **the Turkish folding table in `icd11.dart` and the `FOLD` map in
+`terminology/build.py` must stay identical**. Bumping the ICD-11 release means
+changing `RELEASE` in `build.py` and `Icd11Asset.release` in `icd11.dart`
+together — the build fails if they disagree.
+
+Conditions and diagnoses store `code` **plus `codeSystem`** (the FHIR
+`coding.system` URI), so an imported code from any system round-trips
+unchanged; `docs/fhir-sozlesmesi.md` §3 "Hastalık ve tanı kodları" is the
+contract.
 
 CI (`.github/workflows/mobile-ci.yml`) additionally runs `build_runner` and then `git diff --exit-code -- lib`: **`database.g.dart` is committed and must match the tables**.
 

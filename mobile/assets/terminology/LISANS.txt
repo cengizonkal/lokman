@@ -1,0 +1,17 @@
+Lokman Terminoloji Paketi — ICD-11 MMS 2025-01
+WHO sürüm damgası: 2025 Jan 24 - 22:30 UTC
+
+Hastalık ve tanı kodları Dünya Sağlık Örgütü'nün (WHO) ICD-11 sınıflandırmasından
+alınmıştır:
+
+International Classification of Diseases, Eleventh Revision (ICD-11),
+World Health Organization (WHO) 2019/2025. https://icd.who.int/browse11
+Licensed under Creative Commons Attribution-NoDerivatives 3.0 IGO licence
+(CC BY-ND 3.0 IGO): https://creativecommons.org/licenses/by-nd/3.0/igo/
+
+ICD-11 kodları ve resmî adları değiştirilmemiştir. Aramada kullanılan halk dili
+eş anlamlıları Lokman projesinin katkısıdır (MIT lisansı) ve resmî adların
+yerine geçmez.
+
+ICD-10 karşılıkları WHO'nun ICD-10 / ICD-11 eşleme tablolarından gelir
+(aynı lisans).

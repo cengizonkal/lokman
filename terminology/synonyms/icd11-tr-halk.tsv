@@ -1,0 +1,101 @@
+# Halk dili eş anlamlıları — Lokman projesinin kendi katkısı (MIT lisansı).
+#
+# ICD-11 içeriği değiştirilmez (CC BY-ND); hastanın kullandığı günlük
+# ifadelerle doğru kodu bulabilmesi için eş anlamlılar BU AYRI DOSYADA
+# tutulur (bkz. docs/TERMINOLOJI.md §3 "Uygulama kuralları" 3. madde).
+#
+# Biçim:  <ICD-11 MMS kodu> <TAB> eş;anlam;listesi      # açıklama
+# Kodlar derleme sırasında doğrulanır: ICD-11 2025-01'de olmayan bir kod
+# yazılırsa `terminology/build.py` hata verir.
+#
+# Eş anlamlı yazarken: tanıyı daraltmayın. Halk "kalp yetmezliği" diyorsa
+# kod "tanımlanmamış" (kalıntı) kategori olmalı; "konjestif kalp yetmezliği"
+# gibi daha özel bir kodu hastanın yerine seçmeyin.
+
+# --- Dolaşım sistemi ---
+BA00	yüksek tansiyon;tansiyon;hipertansiyon;tansiyon hastalığı
+BA41	kalp krizi;enfarktüs;miyokart enfarktüsü;kalp enfarktüsü
+BA5Z	koroner arter hastalığı;kalp damar hastalığı;koroner kalp hastalığı;damar tıkanıklığı
+BD1Z	kalp yetmezliği;kalp yetersizliği
+BD74.1	varis;varis damarları;bacak varisi
+8B20	inme;felç;beyin damar tıkanıklığı
+
+# --- Endokrin ve metabolik ---
+5A11	şeker hastalığı;şeker;diyabet;tip 2 diyabet;tip 2 şeker hastalığı
+5A10	tip 1 diyabet;tip 1 şeker hastalığı;insüline bağımlı diyabet
+5A00	hipotiroidi;tiroid az çalışması;tiroid tembelliği
+5A02	hipertiroidi;tiroid fazla çalışması;zehirli guatr
+5A01	guatr;boyun guatrı
+5C80	kolesterol yüksekliği;yüksek kolesterol;hiperlipidemi;dislipidemi;kan yağları yüksekliği
+5B81	şişmanlık;aşırı kilo;kilo fazlalığı
+5B57	d vitamini eksikliği;d vitamini düşüklüğü
+
+# --- Solunum ---
+CA22	koah;kronik akciğer hastalığı
+CA23	bronşiyal astım;nefes darlığı hastalığı
+1E32	grip;influenza;mevsim gribi
+CA00	nezle;soğuk algınlığı;üşütme
+CA40	zatürre;akciğer enfeksiyonu;pnömoni
+CA03	bademcik iltihabı;bademcik;tonsillit
+CA01	sinüzit;sinüs iltihabı
+7A41	uyku apnesi;horlama hastalığı
+
+# --- Enfeksiyon hastalıkları ---
+1B10	verem;akciğer veremi;tüberküloz
+1E50.0	sarılık;hepatit a
+1E90	su çiçeği;suçiçeği
+1F03	kızamık
+1F02	kızamıkçık;rubella
+1D80	kabakulak
+1B50	kızıl
+1D01	menenjit;beyin zarı iltihabı
+1B95	bruselloz;malta humması;peynir hastalığı
+1E91	zona;zona zoster
+RA01	covid;covid 19;kovid;korona;koronavirüs
+
+# --- Sindirim sistemi ---
+DA22	reflü;mide yanması;gastroözofageal reflü
+DA42	mide iltihabı;gastrit
+DA60	mide ülseri;ülser
+DC11	safra taşı;safra kesesi taşı;kolelitiyaz
+DB60	hemoroid;basur
+ME05.0	kabızlık
+
+# --- Böbrek ve idrar yolu ---
+GB70.0	böbrek taşı
+GC08	idrar yolu enfeksiyonu;idrar yolu iltihabı
+GC00	mesane iltihabı;sistit
+GB61	böbrek yetmezliği;kronik böbrek yetmezliği
+GA90	prostat büyümesi;prostat
+
+# --- Kas-iskelet ---
+FA0Z	kireçlenme;eklem kireçlenmesi;osteoartrit
+FA01	diz kireçlenmesi
+FA25	gut;damla hastalığı
+FA20	romatizma;romatoid artrit;iltihaplı eklem romatizması
+FA80.9	bel fıtığı;lomber disk hernisi
+FA80.1	boyun fıtığı;servikal disk hernisi
+ME84.2	bel ağrısı
+8B93	sinir sıkışması;radikülopati
+
+# --- Sinir sistemi ve ruh sağlığı ---
+8A80	migren;yarım baş ağrısı
+8A6Z	sara;epilepsi;havale
+6A7Z	depresyon;ruhsal çöküntü
+6B0Z	anksiyete;kaygı bozukluğu
+
+# --- Kan ---
+3A00	kansızlık;demir eksikliği;demir eksikliği anemisi
+3A01	b12 eksikliği;b12 vitamini eksikliği
+
+# --- Deri ---
+EA80	egzama;ekzema
+EA90	sedef;sedef hastalığı;psoriazis
+ED80	sivilce;akne
+
+# --- Göz, kulak ---
+9B10	katarakt;göz perdesi;perde
+9C61	glokom;göz tansiyonu
+MC41	kulak çınlaması;tinnitus
+MB48.0	baş dönmesi;vertigo
+AB0Z	orta kulak iltihabı;kulak iltihabı;kulak enfeksiyonu

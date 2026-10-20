@@ -7,6 +7,8 @@ import 'package:lokman/app/app.dart';
 import 'package:lokman/app/providers.dart';
 import 'package:lokman/data/db/database.dart';
 import 'package:lokman/data/repository.dart';
+import 'package:lokman/domain/terminology/icd11.dart';
+import 'package:lokman/fhir/fhir_common.dart' show FhirSystems;
 import 'package:lokman/fhir/importer.dart';
 import 'package:lokman/notifications/notification_service.dart';
 
@@ -16,6 +18,7 @@ Future<void> pumpApp(
   WidgetTester tester,
   AppDatabase db, {
   bool onboarded = false,
+  Icd11Catalog? icd11,
 }) async {
   // Yaygın bir Android telefon ekranı.
   tester.view.physicalSize = const Size(1080, 2340);
@@ -28,6 +31,7 @@ Future<void> pumpApp(
         notificationServiceProvider.overrideWithValue(
           NotificationService(enabled: false),
         ),
+        if (icd11 != null) icd11Provider.overrideWith((ref) => icd11),
       ],
       child: LokmanApp(onboarded: onboarded),
     ),
@@ -154,6 +158,61 @@ void main() {
     await tester.tap(find.text('Paylaş'));
     await tester.pumpAndSettle();
     expect(find.text('QR kod okut'), findsOneWidget);
+    await tearDownApp(tester, db);
+  });
+
+  testWidgets('hastalık eklenirken ICD-11 kodu listeden seçilir', (
+    tester,
+  ) async {
+    final db = memoryDb();
+    await tester.runAsync(() async {
+      await Repository(db)
+          .addProfile(ProfilesCompanion.insert(firstName: 'Ali'));
+    });
+    // Terminoloji paketi uygulamanın varlıklarından okunur; widget testinde
+    // gerçek dosya okumasını önceden yapıp provider'a veriyoruz.
+    final catalog = (await tester.runAsync(loadIcd11Catalog))!;
+    expect(catalog.release, Icd11Asset.release);
+    await pumpApp(tester, db, onboarded: true, icd11: catalog);
+
+    await tester.tap(find.text('Kayıtlar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hastalıklar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hastalık ekle'));
+    await tester.pumpAndSettle();
+
+    // Halk dilinde yazılır, resmî ICD-11 kategorisi önerilir.
+    await tester.enterText(find.byType(TextField).first, 'yüksek tansiyon');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Esansiyel Hipertansiyon').last);
+    await tester.pumpAndSettle();
+    expect(find.text('ICD-11 BA00'), findsOneWidget);
+
+    await tester.tap(find.text('Kaydet'));
+    await tester.pumpAndSettle();
+    final saved = (await tester.runAsync(db.select(db.conditions).get))!.single;
+    expect(saved.name, 'Esansiyel Hipertansiyon');
+    expect(saved.code, 'BA00');
+    expect(saved.codeSystem, FhirSystems.icd11);
+
+    // Ad elle değiştirilirse kod düşer: kod artık o adı göstermiyordur.
+    await tester.tap(find.text('Esansiyel Hipertansiyon'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Düzenle'));
+    await tester.pumpAndSettle();
+    expect(find.text('ICD-11 BA00'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'Tansiyonum yüksek');
+    await tester.pumpAndSettle();
+    expect(find.text('ICD-11 BA00'), findsNothing);
+    await tester.tap(find.text('Kaydet'));
+    await tester.pumpAndSettle();
+    final edited = (await tester.runAsync(db.select(db.conditions).get))!
+        .single;
+    expect(edited.name, 'Tansiyonum yüksek');
+    expect(edited.code, isNull);
+    expect(edited.codeSystem, isNull);
+
     await tearDownApp(tester, db);
   });
 

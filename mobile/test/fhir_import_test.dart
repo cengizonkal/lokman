@@ -7,6 +7,8 @@ import 'package:lokman/data/db/database.dart';
 import 'package:lokman/data/repository.dart';
 import 'package:lokman/fhir/bundle_reader.dart';
 import 'package:lokman/fhir/bundle_writer.dart';
+import 'package:lokman/domain/terminology/icd11.dart';
+import 'package:lokman/fhir/fhir_common.dart' show FhirSystems, Json;
 import 'package:lokman/fhir/importer.dart';
 
 import 'test_utils.dart';
@@ -356,6 +358,218 @@ void main() {
       expect(med2.encounterId, e2.id);
     },
   );
+
+  group('ICD-11 kodlaması', () {
+    late Icd11Catalog catalog;
+
+    setUpAll(() {
+      catalog = Icd11Catalog.parse(
+        terminologyAsset('icd11-mms-2025-01.tsv'),
+        icd10Map: terminologyAsset('icd10-icd11-2025-01.tsv'),
+      );
+    });
+
+    /// Paketteki ilk Condition kaynağının `code` alanını değiştirip aktarır.
+    Future<Condition> importWithCode(Map<String, dynamic> code) async {
+      final json = jsonDecode(exampleBundle()) as Map<String, dynamic>;
+      final condition =
+          [for (final e in json['entry'] as List) e['resource'] as Map]
+              .firstWhere(
+                (r) =>
+                    r['resourceType'] == 'Condition' &&
+                    jsonEncode(r['category']).contains('problem-list-item'),
+              );
+      condition['code'] = code;
+      final r = memoryRepo();
+      addTearDown(r.db.close);
+      final imp = Importer(r);
+      final parsed = await imp.parse(jsonEncode(json));
+      final pid = await imp.createProfileFrom(parsed.patient);
+      await imp.apply(parsed, pid);
+      return (await r.watchConditions(pid).first).single;
+    }
+
+    test('örnek paketteki ICD-11 kodu sistemiyle okunur', () async {
+      final parsed = await importer.parse(exampleBundle());
+      final pid = await importer.createProfileFrom(parsed.patient);
+      await importer.apply(parsed, pid);
+      final condition = (await repo.watchConditions(pid).first).single;
+      expect(condition.code, 'BA00');
+      expect(condition.codeSystem, FhirSystems.icd11);
+      final diagnosis = (await repo.watchDiagnoses(pid).first).single;
+      expect(diagnosis.code, 'CA02');
+      expect(diagnosis.codeSystem, FhirSystems.icd11);
+    });
+
+    test('ICD-11 varsa ICD-10 yerine o alınır', () async {
+      final condition = await importWithCode({
+        'coding': [
+          {'system': FhirSystems.icd10, 'code': 'J45'},
+          {'system': FhirSystems.icd11, 'code': 'CA23'},
+        ],
+        'text': 'Astım',
+      });
+      expect(condition.code, 'CA23');
+      expect(condition.codeSystem, FhirSystems.icd11);
+    });
+
+    test('ICD-10 kodlu dış kayıt sistemiyle saklanır', () async {
+      final condition = await importWithCode({
+        'coding': [
+          {'system': FhirSystems.icd10, 'code': 'J45.9'},
+        ],
+        'text': 'Astım',
+      });
+      expect(condition.code, 'J45.9');
+      expect(condition.codeSystem, FhirSystems.icd10);
+      // Katalogda olmayan sistem de reddedilmez, olduğu gibi durur.
+      final other = await importWithCode({
+        'coding': [
+          {'system': 'urn:oid:1.2.3.4', 'code': 'X-99'},
+        ],
+        'text': 'Bilinmeyen kodlu hastalık',
+      });
+      expect(other.code, 'X-99');
+      expect(other.codeSystem, 'urn:oid:1.2.3.4');
+    });
+
+    test('dışa aktarımda ICD-11 kodu ve ICD-10 karşılığı yazılır', () async {
+      final profileId = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ayşe'),
+      );
+      await repo.save(
+        repo.db.conditions,
+        ConditionsCompanion.insert(
+          profileId: profileId,
+          name: 'Yüksek tansiyon',
+          code: const Value('BA00'),
+          codeSystem: const Value(FhirSystems.icd11),
+        ),
+      );
+      final bundle = buildBundle(
+        await ExportData.load(repo.db, profileId),
+        appId: await repo.appId(),
+        icd11: catalog,
+      );
+      final condition = [
+        for (final e in bundle['entry'] as List) e['resource'] as Json,
+      ].firstWhere((r) => r['resourceType'] == 'Condition');
+      final codings = (condition['code']['coding'] as List).cast<Json>();
+      expect(codings, hasLength(2));
+      expect(codings[0]['system'], FhirSystems.icd11);
+      expect(codings[0]['code'], 'BA00');
+      // Resmî ad katalogdan gelir; kullanıcının yazdığı ad `text` kalır.
+      expect(codings[0]['display'], 'Esansiyel Hipertansiyon');
+      expect(condition['code']['text'], 'Yüksek tansiyon');
+      expect(codings[1]['system'], FhirSystems.icd10);
+      expect(codings[1]['code'], 'I10');
+    });
+
+    test('eşleme aralık verdiğinde ICD-10 kodlaması yazılmaz', () async {
+      // CA40 (Pnömoni) eşleme tablosunda 'J09-J18' aralığına düşer; aralık
+      // ICD-10 kodu değildir, ikincil kodlama olarak yazılmamalı.
+      expect(catalog.byCode('CA40')!.icd10, 'J09-J18');
+      final profileId = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ayşe'),
+      );
+      await repo.save(
+        repo.db.conditions,
+        ConditionsCompanion.insert(
+          profileId: profileId,
+          name: 'Zatürre',
+          code: const Value('CA40'),
+          codeSystem: const Value(FhirSystems.icd11),
+        ),
+      );
+      final bundle = buildBundle(
+        await ExportData.load(repo.db, profileId),
+        appId: await repo.appId(),
+        icd11: catalog,
+      );
+      final condition = [
+        for (final e in bundle['entry'] as List) e['resource'] as Json,
+      ].firstWhere((r) => r['resourceType'] == 'Condition');
+      final codings = (condition['code']['coding'] as List).cast<Json>();
+      expect(codings, hasLength(1));
+      expect(codings.single['code'], 'CA40');
+    });
+
+    test('kodlu kayıt dışa aktarılıp geri alınınca kodu korur', () async {
+      final profileId = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ayşe'),
+      );
+      await repo.save(
+        repo.db.conditions,
+        ConditionsCompanion.insert(
+          profileId: profileId,
+          name: 'Astım',
+          code: const Value('CA23'),
+          codeSystem: const Value(FhirSystems.icd11),
+        ),
+      );
+      final bundle = buildBundle(
+        await ExportData.load(repo.db, profileId),
+        appId: await repo.appId(),
+        icd11: catalog,
+      );
+      final other = memoryRepo();
+      addTearDown(other.db.close);
+      final imp = Importer(other);
+      final parsed = await imp.parse(encodeBundle(bundle));
+      final pid = await imp.createProfileFrom(parsed.patient);
+      await imp.apply(parsed, pid);
+      final roundTrip = (await other.watchConditions(pid).first).single;
+      expect(roundTrip.code, 'CA23');
+      expect(roundTrip.codeSystem, FhirSystems.icd11);
+      expect(roundTrip.name, 'Astım');
+    });
+
+    test('kodsuz kayıtlar paket gelince bir kez eşleştirilir', () async {
+      final profileId = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ayşe'),
+      );
+      for (final name in [
+        'Yüksek tansiyon', // halk dili eş anlamlısı → BA00
+        'Astım', // resmî Türkçe ad → CA23
+        'Doktorun yazdığı bir şey', // katalogda yok → kodsuz kalır
+      ]) {
+        await repo.save(
+          repo.db.conditions,
+          ConditionsCompanion.insert(profileId: profileId, name: name),
+        );
+      }
+      // Klinikten gelen kodsuz kayda dokunulmaz.
+      await repo.save(
+        repo.db.conditions,
+        ConditionsCompanion.insert(
+          profileId: profileId,
+          name: 'Migren',
+          source: const Value(RecordSource.clinic),
+          originName: const Value('Örnek Klinik'),
+        ),
+      );
+
+      var loaded = 0;
+      Future<Icd11Catalog> load() async {
+        loaded++;
+        return catalog;
+      }
+
+      expect(await repo.applyTerminologyPackage(load), 2);
+      final byName = {
+        for (final c in await repo.watchConditions(profileId).first) c.name: c,
+      };
+      expect(byName['Yüksek tansiyon']!.code, 'BA00');
+      expect(byName['Yüksek tansiyon']!.codeSystem, FhirSystems.icd11);
+      expect(byName['Astım']!.code, 'CA23');
+      expect(byName['Doktorun yazdığı bir şey']!.code, isNull);
+      expect(byName['Migren']!.code, isNull);
+
+      // İkinci açılışta paket yeniden okunmaz, kayıtlar yeniden taranmaz.
+      expect(await repo.applyTerminologyPackage(load), 0);
+      expect(loaded, 1);
+    });
+  });
 
   test('geçersiz dosya anlaşılır hata verir', () async {
     expect(

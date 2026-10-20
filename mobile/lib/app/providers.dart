@@ -1,7 +1,10 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../data/db/database.dart';
 import '../data/repository.dart';
+import '../domain/terminology/icd11.dart';
 import '../fhir/importer.dart';
 import '../notifications/notification_service.dart';
 
@@ -22,6 +25,26 @@ final notificationServiceProvider = Provider<NotificationService>(
 final importerProvider = Provider<Importer>(
   (ref) => Importer(ref.watch(repositoryProvider)),
 );
+
+/// Uygulama sürümü, `0.1.2 (3)` biçiminde. Platform bilgisi okunamazsa
+/// (testler, masaüstü) boş döner; gösteren ekranlar boşsa satırı atlar.
+final appVersionProvider = FutureProvider<String>((ref) async {
+  try {
+    final info = await PackageInfo.fromPlatform();
+    return '${info.version} (${info.buildNumber})';
+  } catch (_) {
+    return '';
+  }
+});
+
+/// Uygulamaya gömülü ICD-11 kataloğunu okur (yaklaşık 3,5 MB metin).
+Future<Icd11Catalog> loadIcd11Catalog() async => Icd11Catalog.parse(
+  await rootBundle.loadString(Icd11Asset.catalog),
+  icd10Map: await rootBundle.loadString(Icd11Asset.icd10Map),
+);
+
+/// ICD-11 kataloğu; yalnızca hastalık / tanı alanı açılınca yüklenir.
+final icd11Provider = FutureProvider<Icd11Catalog>((ref) => loadIcd11Catalog());
 
 final profilesProvider = StreamProvider<List<Profile>>(
   (ref) => ref.watch(repositoryProvider).watchProfiles(),

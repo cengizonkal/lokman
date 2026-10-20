@@ -17,6 +17,10 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(const [
       'DejaVu fonts',
     ], await rootBundle.loadString('assets/fonts/DejaVu-LICENSE.txt'));
+    // ICD-11 atıf zorunluluğu (CC BY-ND 3.0 IGO); bkz. terminology/LICENSES.md
+    yield LicenseEntryWithLineBreaks(const [
+      'WHO ICD-11',
+    ], await rootBundle.loadString('assets/terminology/LISANS.txt'));
   });
 
   final db = AppDatabase.open();
@@ -39,4 +43,8 @@ Future<void> main() async {
   // Bildirimleri her açılışta güncel kayıtlardan yeniden kur (biten ilaçlar
   // düşer, sonlu süreli ilaçların ileriki dozları eklenir).
   if (onboarded) await notifications.reschedule(repo);
+
+  // Terminoloji paketi yeni geldiyse (ya da yenilendiyse) kullanıcının
+  // kodsuz kayıtlarını bir kez ICD-11 ile eşleştir.
+  if (onboarded) await repo.applyTerminologyPackage(loadIcd11Catalog);
 }

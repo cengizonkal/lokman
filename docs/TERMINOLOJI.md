@@ -1,7 +1,9 @@
 # Lokman — Terminoloji Paketi ve Kaynak Araştırması
 
-> Durum: **kararlar alındı (hastalık kodlaması: ICD-11).** Kod yazılmadı.
-> İlgili: [PLAN.md](PLAN.md), [VERITABANI.md](VERITABANI.md)
+> Durum: **ICD-11 paketi üretildi ve mobil uygulamaya gömüldü** (ICD-11 MMS
+> 2025-01). İlaç, aşı ve alerji listeleri hâlâ bekliyor (bölüm 4–5).
+> İlgili: [PLAN.md](PLAN.md), [VERITABANI.md](VERITABANI.md),
+> [terminology/README.md](../terminology/README.md)
 
 ## 1. Alınan kararlar (fikir alışverişinden)
 - Hastalık, aşı, ilaç ve alerji listeleri tek bir yerden gelir: proje tarafından sürümlenen **Lokman Terminoloji Paketi**.
@@ -18,7 +20,8 @@
 |---|---|---|---|
 | **SNOMED CT Global Patient Set (GPS)** | Aşı, hastalık, alerji kavramları | **Evet.** CC BY 4.0; yeniden dağıtım ve türev ürün serbest | SNOMED'in desteği ima edilemez; logo ve marka için yazılı izin gerekir. Tam SNOMED CT değil, ücretsiz bir alt küme. İçerik İngilizce; Türkçe adları proje yazar |
 | **WHO ICD-10** | Hastalık kodları | **Hayır, izin gerekiyor.** Yeniden dağıtım WHO iznine bağlı. Kodların açık kaynak lisansla dağıtılmaması ve içeriğin değiştirilmemesi isteniyor | Bulgu WHO'nun bir izin yazısına ve satıcı sözleşmelerine dayanıyor; güncel resmi metin WHO'dan teyit edilmeli |
-| **WHO ICD-11** | Hastalık kodları | **Büyük olasılıkla evet.** CC BY-ND 3.0 IGO; WHO, yazılıma dahil etmeyi "uyarlama" saymıyor (atıf korunmalı, kodlar değiştirilmemeli) | Resmi bir **Türkçe çevirisi** var. Ancak Türkiye klinikleri hâlâ ICD-10 kullanıyor |
+| **WHO ICD-11** | Hastalık kodları | **Evet, doğrulandı.** CC BY-ND 3.0 IGO; sürüm dosyaları giriş gerektirmeden indiriliyor. Atıf uygulamanın lisans ekranında | Resmî Türkçe çeviri tam sayılabilir: tanı bölümlerindeki 17.231 kategoriden yalnızca 55'inin (%0,3) Türkçesi yok. Türkiye klinikleri hâlâ ICD-10 kullanıyor; ICD-10 karşılıkları pakette |
+| **WHO ICD-10 ↔ ICD-11 eşleme tabloları** | Dışarıdan gelen ICD-10 kodunu tanımak, dışa aktarımda ICD-10 karşılığını yazmak | **Evet.** ICD-11 sürüm dosyalarıyla aynı paketten (`mapping.zip`), aynı lisans | 11.615 ICD-10 → ICD-11, 17.256 ICD-11 → ICD-10 eşlemesi pakete girdi |
 | **SKRS (Sağlık Bakanlığı)** | Aşı kodları (ICD-10 Türkçe adları artık gerekmiyor) | **Belirsiz.** Kod listeleri ve web servisleri var (`skrs.saglik.gov.tr`), ama kullanım ve yeniden dağıtım koşulları bulunamadı; giriş gerekebilir | Bakanlığa yazılı sorulmalı |
 | **TİTCK ilaç listesi** | İlaç adı, barkod, etken madde, ATC | **Belirsiz.** Haftalık yayımlanıyor; üçüncü taraf siteler kullanıyor, ama kullanım koşulları bulunamadı | TİTCK'ye yazılı sorulmalı |
 | **LOINC / UCUM** | Ölçüm türleri ve birimleri | Evet (mevcut uygulamada zaten kullanılıyor) | LOINC lisansının atıf koşulu kontrol edilmeli |
@@ -43,15 +46,15 @@
 - Lokman e-Nabız/SGK'ya bağlı değil (bkz. PLAN.md), bu yüzden ICD-10 zorunluluğu yok.
 
 ### Uygulama kuralları
-1. **Kod sistemi:** ICD-11 MMS, Türkçe + İngilizce ad. FHIR `system`: `http://id.who.int/icd/release/11/mms`. Paket hangi ICD-11 sürümünü içerdiğini kaydeder (ör. `2026-01`).
-2. **v0.1'de yalnızca temel (stem) kodlar.** Kod birleştirme sonraki sürüme kalır.
-3. **Kaynak:** WHO ICD-11 resmî sürüm dosyaları (Türkçe dahil) terminoloji paketine eklenir; atıf `terminology/LICENSES.md`'de. ICD-11 içeriği değiştirilmez; halk dili eş anlamlıları **ayrı bir dosyada** proje tarafından eklenir.
-4. **Mobil ve klinik aynı paketi kullanır.** Klinikte ayrıca hastalık listesi yüklenmez.
+1. **Kod sistemi:** ICD-11 MMS, Türkçe + İngilizce ad. FHIR `system`: `http://id.who.int/icd/release/11/mms`. Paket hangi ICD-11 sürümünü içerdiğini kaydeder (bugün `2025-01`). ✔
+2. **v0.1'de yalnızca temel (stem) kodlar.** Kod birleştirme sonraki sürüme kalır. ✔ Uzatma kodları (bölüm X), işlevsellik değerlendirmesi (V) ve geleneksel tıp (26) pakete girmez; tanı bölümleri 01–25 girer.
+3. **Kaynak:** WHO ICD-11 resmî sürüm dosyaları (Türkçe dahil) terminoloji paketine eklenir; atıf `terminology/LICENSES.md`'de. ICD-11 içeriği değiştirilmez; halk dili eş anlamlıları **ayrı bir dosyada** proje tarafından eklenir. ✔ (`terminology/synonyms/icd11-tr-halk.tsv`, bugün 66 kodda eş anlamlı)
+4. **Mobil ve klinik aynı paketi kullanır.** Klinikte ayrıca hastalık listesi yüklenmez. (Mobil tarafı hazır; klinik sistemi yazılmadı.)
 5. **ICD-10 ile karşılaşma:** başka kurumdan ICD-10 (ya da ICD-10-CM) kodlu kayıt gelirse kayıpsız saklanır (`coding`), metniyle gösterilir, reddedilmez. WHO'nun ICD-10 ↔ ICD-11 eşleme tablosunun lisansı uygunsa ek olarak:
    - içe aktarımda ICD-11 karşılığı önerilir,
    - doktor ICD-10 kodunu yazarak da arama yapabilir,
    - dışa aktarımda ICD-10 karşılığı ek `coding` olarak yazılır.
-   Bu üçü eşleme tablosunun lisansı doğrulanana kadar **opsiyonel**dir.
+   Eşleme tablosu ICD-11 ile aynı lisanstan geldiği doğrulandı ve pakete girdi; birinci madde (içe aktarımda ICD-11 karşılığının **önerilmesi**) için ekran henüz yok, ikinci ve üçüncü maddeler mobilde çalışıyor (ICD-10 koduyla arama ve dışa aktarımda ikincil ICD-10 kodlaması).
 
 ### Riskler
 | Risk | Önlem |
@@ -59,7 +62,7 @@
 | Türkiye/KKTC doktorlarının ICD-10 alışkanlığı | Güçlü Türkçe arama; eşleme tablosu uygunsa ICD-10 koduyla arama |
 | İleride e-Nabız/SGK entegrasyonu gerekirse ICD-10 istenir | Ayrı bir ICD-11 → ICD-10 dönüştürücü katman (eşleme tablosuyla) |
 | IPS validator'ın ICD-11 kodlarını kabulü | F0'da örnek paketlerle test |
-| Türkçe çevirinin tamlığı | Eksik Türkçe adda İngilizce ad gösterilir; F0'da kontrol |
+| Türkçe çevirinin tamlığı | Kontrol edildi: tanı bölümlerinde 55 kategoride (%0,3) Türkçe ad yok, bu kayıtlarda İngilizce ad gösterilir |
 
 ## 4. Aşılar için durum
 - Proje ~30–40 aşılık listeyi kendisi hazırlar: Türkçe ad, İngilizce ad, SNOMED GPS kodu.
@@ -72,11 +75,13 @@ TİTCK listesinin uygulamada dağıtım izni belirsiz. Yanıt gelene kadar seçe
 - **(ii)** İzin çıkarsa TİTCK listesi (ad, barkod, etken madde, ATC) pakete eklenir; barkod okutma bu durumda çalışır.
 
 ## 6. Yapılacaklar (kod dışı)
-- [ ] ICD-11 Türkçe sürüm dosyalarını indirip tamlığını ve CC BY-ND atıf metnini doğrulamak
-- [ ] WHO ICD-10 ↔ ICD-11 eşleme tablosunun lisansını doğrulamak
+- [x] ICD-11 Türkçe sürüm dosyalarını indirip tamlığını ve CC BY-ND atıf metnini doğrulamak (2026-10-20; `SimpleTabulation-ICD-11-MMS-tr` 2025-01, %99,7 Türkçe)
+- [x] WHO ICD-10 ↔ ICD-11 eşleme tablosunun lisansını doğrulamak (aynı sürüm paketi, aynı CC BY-ND 3.0 IGO lisansı)
+- [ ] Eşleşmeyen kodsuz kayıtlar için kullanıcıya sorma akışı (bugün yalnızca adı birebir eşleşenlere kod yazılıyor; diğerleri kayıt düzenlenirken listeden seçilebiliyor)
+- [ ] Klinik sistemi (yazılmadı) aynı paketi kullanacak: ICD-11 arama ve kod saklama backend tarafında
 - [ ] Sağlık Bakanlığı'na SKRS aşı kodlarının kullanım koşulu sorusu (izin yazıları şimdilik hazırlanmayacak)
 - [ ] TİTCK'ye ilaç listesinin uygulama içinde dağıtımı sorusu (şimdilik ertelendi)
-- [ ] Mobil kodda ICD-10 referanslarını ICD-11'e çevirmek (`mobile/lib/fhir/fhir_common.dart`, `bundle_writer.dart`, `bundle_reader.dart`, `simple_record_screens.dart`) — kodlama aşamasında
+- [x] Mobil kodda ICD-10 referanslarını ICD-11'e çevirmek (`mobile/lib/fhir/fhir_common.dart`, `bundle_writer.dart`, `bundle_reader.dart`, `simple_record_screens.dart`) — ICD-10 okumaya devam edilir, yazarken asıl kod ICD-11'dir
 - [ ] SNOMED GPS güncel sürümünü ve atıf metnini doğrulamak
 - [ ] LOINC atıf koşulunu kontrol etmek
 

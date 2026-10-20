@@ -1,5 +1,16 @@
 # Değişiklikler
 
+## 0.1.3
+
+- **Hastalık ve tanı adları artık uluslararası standart kodla kaydediliyor.** Hastalık ya da tanı yazarken uygulama, içinde gömülü gelen **ICD-11** listesinde arama yapar (17.231 hastalık, resmî Türkçe adlarıyla). Günlük dille yazmanız yeter: "yüksek tansiyon" yazınca *Esansiyel Hipertansiyon*, "zatürre" yazınca *Pnömoni*, "şeker hastalığı" yazınca *Tip 2 diabetes mellitus* önerilir. Listeden seçerseniz hastalığın kodu da kaydedilir ve alanın altında görünür ("ICD-11 BA00").
+- Listede olmayan bir şey yazmaya devam edebilirsiniz; kayıt yine tutulur, yalnızca kodu olmaz. Adı sonradan elle değiştirirseniz kod düşer, çünkü kod artık o adı göstermiyordur.
+- **Sağlık dosyanız artık daha standart:** dışa aktarılan dosyada hastalık ve tanılar ICD-11 koduyla, resmî adıyla ve (varsa) ICD-10 karşılığıyla yazılır. Böylece dosyayı okuyan klinik, ICD-10 kullanıyor olsa bile kaydı tanır. Doktorunuz ICD-10 kodunu (ör. `I10`) yazarak da arayabilir.
+- Klinikten gelen dosyalarda kodun hangi listeden geldiği de saklanır: ICD-11, ICD-10 ya da kurumun kendi listesi; tanınmayan kod artık kaybolmaz ve geri aktarımda aynen çıkar.
+- Daha önce kendi girdiğiniz hastalıklardan adı listeye birebir uyanlara kod bir kez kendiliğinden işlenir. Klinikten gelen kayıtlara dokunulmaz.
+- Bir kaydı düzenleyip bir alanı tamamen boşalttığınızda (not, hastane adı, tanı) eski değerin kayıtta kalmasına yol açan hata düzeltildi.
+- Lisans ekranına (Ayarlar → Lokman) ICD-11 için Dünya Sağlık Örgütü atfı eklendi.
+- Karşılama ekranında uygulama sürümü görünüyor.
+
 ## 0.1.2
 
 > **Önemli:** Bu, kalıcı imza anahtarıyla imzalanan ilk sürüm. Telefonunuzda 0.1.0 ya da 0.1.1 kuruluysa bu sürüm onun üstüne kurulamaz. Önce uygulamada **Paylaş → Paylaş / yedekle** ile yedek alın, eski sürümü kaldırın, 0.1.2'yi kurun ve yedeği içe aktarın. Bundan sonraki sürümler güncelleme olarak kurulur.

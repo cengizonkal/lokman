@@ -9,6 +9,7 @@ import '../../domain/catalog.dart';
 import '../../domain/dose_schedule.dart' show dateOnly;
 import '../medications/medication_wizard.dart';
 import '../../widgets/common.dart';
+import '../../widgets/concept_field.dart';
 import 'record_widgets.dart';
 
 // ------------------------------------------------------------------ Alerjiler
@@ -237,7 +238,7 @@ class ConditionsScreen extends ConsumerWidget {
           onset == end ? '$end' : '$onset – $end',
         if (resolved && onset == null && end != null) '$end yılında geçti',
         if (resolved && onset != null && end == null) '$onset yılında başladı',
-        ?c.code,
+        ?formatCode(c.code, c.codeSystem),
       ].join(' · '),
       source: c.source,
       originName: c.originName,
@@ -259,7 +260,7 @@ class ConditionsScreen extends ConsumerWidget {
             'Geçtiği tarih',
             c.resolvedDate == null ? null : formatDay(c.resolvedDate!),
           ),
-          InfoRow('Kod (ICD-10)', c.code),
+          InfoRow('Kod', formatCode(c.code, c.codeSystem)),
           InfoRow('Not', c.note),
         ],
         onEdit: () => openForm(context, ConditionForm(edit: c)),
@@ -287,6 +288,8 @@ class ConditionForm extends ConsumerStatefulWidget {
 class _ConditionFormState extends ConsumerState<ConditionForm> {
   late final _name = TextEditingController(text: widget.edit?.name ?? '');
   late final _note = TextEditingController(text: widget.edit?.note ?? '');
+  late String? _code = widget.edit?.code;
+  late String? _codeSystem = widget.edit?.codeSystem;
   late DateTime? _onset = widget.edit?.onsetDate;
   late bool _resolved = widget.edit?.status == ConditionStatus.resolved;
   late DateTime? _resolvedDate = widget.edit?.resolvedDate;
@@ -314,6 +317,8 @@ class _ConditionFormState extends ConsumerState<ConditionForm> {
       repo.db.conditions,
       base.copyWith(
         name: _name.text.trim(),
+        code: Value(_code),
+        codeSystem: Value(_codeSystem),
         onsetDate: Value(_onset),
         status: _resolved ? ConditionStatus.resolved : ConditionStatus.active,
         resolvedDate: Value(_resolved ? _resolvedDate : null),
@@ -346,13 +351,17 @@ class _ConditionFormState extends ConsumerState<ConditionForm> {
         onSelectionChanged: (s) => setState(() => _resolved = s.first),
       ),
       formGap,
-      SuggestField(
+      ConceptField(
         controller: _name,
         label: 'Hastalığın adı *',
-        hint: _resolved ? 'Örn. Zatürre' : 'Örn. Hipertansiyon',
-        suggestions: _resolved
-            ? pastConditionSuggestions
-            : conditionSuggestions,
+        hint: _resolved ? 'Örn. Zatürre' : 'Örn. yüksek tansiyon',
+        code: _code,
+        codeSystem: _codeSystem,
+        onCode: (code, system) => setState(() {
+          _code = code;
+          _codeSystem = system;
+        }),
+        fallback: _resolved ? pastConditionSuggestions : conditionSuggestions,
         autofocus: widget.edit == null,
         onChanged: () => setState(() {}),
       ),
@@ -631,7 +640,13 @@ class EncountersScreen extends ConsumerWidget {
           for (final d in dx)
             InfoRow(
               d.verification == 'provisional' ? 'Ön tanı' : 'Tanı',
-              [d.name, if (d.code != null) '(${d.code})'].join(' '),
+              [
+                d.name,
+                ?switch (formatCode(d.code, d.codeSystem)) {
+                  final code? => '($code)',
+                  _ => null,
+                },
+              ].join(' '),
             ),
           InfoRow('Doktorun önerileri', e.plan),
           InfoRow(
@@ -748,6 +763,8 @@ class _EncounterFormState extends ConsumerState<EncounterForm> {
   late final _diagnosis = TextEditingController(
     text: widget.diagnosis?.name ?? '',
   );
+  late String? _dxCode = widget.diagnosis?.code;
+  late String? _dxCodeSystem = widget.diagnosis?.codeSystem;
   late final _plan = TextEditingController(text: widget.edit?.plan ?? '');
   late final _note = TextEditingController(text: widget.edit?.note ?? '');
   late DateTime? _date = widget.edit?.date ?? dateOnly(DateTime.now());
@@ -800,7 +817,9 @@ class _EncounterFormState extends ConsumerState<EncounterForm> {
       if (existing != null) {
         await repo.deleteRecord(repo.db.diagnoses, existing.id);
       }
-    } else if (existing?.name != dxName || existing?.date != _date) {
+    } else if (existing?.name != dxName ||
+        existing?.date != _date ||
+        existing?.code != _dxCode) {
       final dx =
           existing ??
           Diagnosis(
@@ -817,8 +836,9 @@ class _EncounterFormState extends ConsumerState<EncounterForm> {
           name: dxName,
           encounterId: Value(encounter.id),
           date: Value(_date),
-          // Ad değiştiyse eski kod artık geçerli değildir.
-          code: Value(existing?.name == dxName ? existing?.code : null),
+          // Ad değiştiyse kod ConceptField tarafından düşürülür.
+          code: Value(_dxCode),
+          codeSystem: Value(_dxCodeSystem),
         ),
       );
     }
@@ -881,11 +901,17 @@ class _EncounterFormState extends ConsumerState<EncounterForm> {
         ),
       ),
       formGap,
-      SuggestField(
+      ConceptField(
         controller: _diagnosis,
         label: 'Doktorun söylediği tanı',
-        hint: 'Örn. Bademcik iltihabı',
-        suggestions: conditionSuggestions,
+        hint: 'Örn. bademcik iltihabı',
+        code: _dxCode,
+        codeSystem: _dxCodeSystem,
+        onCode: (code, system) => setState(() {
+          _dxCode = code;
+          _dxCodeSystem = system;
+        }),
+        fallback: conditionSuggestions,
       ),
       formGap,
       TextField(

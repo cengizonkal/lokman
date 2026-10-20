@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app/providers.dart';
 import '../../data/repository.dart';
@@ -14,15 +13,6 @@ final _flagProvider = StreamProvider.family<bool, String>(
       .watchSetting(key)
       .map((v) => v == null || v == '1'),
 );
-
-final _versionProvider = FutureProvider<String>((ref) async {
-  try {
-    final info = await PackageInfo.fromPlatform();
-    return '${info.version} (${info.buildNumber})';
-  } catch (_) {
-    return '';
-  }
-});
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -123,15 +113,15 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Lokman'),
             subtitle: Text(
               [
-                if ((ref.watch(_versionProvider).value ?? '').isNotEmpty)
-                  'Sürüm ${ref.watch(_versionProvider).value}',
+                if ((ref.watch(appVersionProvider).value ?? '').isNotEmpty)
+                  'Sürüm ${ref.watch(appVersionProvider).value}',
                 'Açık kaynak (MIT lisansı)',
               ].join(' · '),
             ),
             onTap: () => showLicensePage(
               context: context,
               applicationName: 'Lokman',
-              applicationVersion: ref.read(_versionProvider).value,
+              applicationVersion: ref.read(appVersionProvider).value,
             ),
           ),
           const SizedBox(height: 24),

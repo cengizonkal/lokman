@@ -139,7 +139,10 @@
           { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "problem-list-item" }] }
         ],
         "code": {
-          "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10", "code": "I10", "display": "Essential (primary) hypertension" }],
+          "coding": [
+            { "system": "http://id.who.int/icd/release/11/mms", "code": "BA00", "display": "Esansiyel Hipertansiyon" },
+            { "system": "http://hl7.org/fhir/sid/icd-10", "code": "I10" }
+          ],
           "text": "Esansiyel hipertansiyon"
         },
         "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },
@@ -182,7 +185,10 @@
           { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "encounter-diagnosis" }] }
         ],
         "code": {
-          "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10", "code": "J02.9", "display": "Acute pharyngitis, unspecified" }],
+          "coding": [
+            { "system": "http://id.who.int/icd/release/11/mms", "code": "CA02", "display": "Akut farenjit" },
+            { "system": "http://hl7.org/fhir/sid/icd-10", "code": "J02" }
+          ],
           "text": "Akut farenjit"
         },
         "subject": { "reference": "urn:uuid:0199f3a2-0000-7000-8000-00000000a001" },

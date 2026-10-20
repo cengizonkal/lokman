@@ -13,14 +13,22 @@ AppDatabase memoryDb() {
 Repository memoryRepo() => Repository(memoryDb());
 
 /// Depodaki örnek klinik paketini okur (`fhir/examples`).
-String exampleBundle([String name = 'klinik-cikti-ayse.json']) {
+String exampleBundle([String name = 'klinik-cikti-ayse.json']) =>
+    _repoFile('fhir/examples/$name');
+
+/// Terminoloji paketi varlığını okur (`mobile/assets/terminology`).
+String terminologyAsset(String name) =>
+    _repoFile('mobile/assets/terminology/$name');
+
+/// Depo kökünden verilen yolu, çalışma dizininden yukarı çıkarak bulur.
+String _repoFile(String relative) {
   var dir = Directory.current;
-  while (!File('${dir.path}/fhir/examples/$name').existsSync()) {
+  while (!File('${dir.path}/$relative').existsSync()) {
     final parent = dir.parent;
     if (parent.path == dir.path) {
-      throw StateError('fhir/examples/$name bulunamadı');
+      throw StateError('$relative bulunamadı');
     }
     dir = parent;
   }
-  return File('${dir.path}/fhir/examples/$name').readAsStringSync();
+  return File('${dir.path}/$relative').readAsStringSync();
 }

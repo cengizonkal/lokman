@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../data/db/database.dart';
 import '../domain/dose_schedule.dart';
 import '../fhir/bundle_writer.dart';
+import '../app/format.dart' show formatCode;
 import '../fhir/fhir_common.dart' show fmtNumber;
 
 class PdfFonts {
@@ -171,7 +172,7 @@ Future<Uint8List> buildSummaryPdf(
           for (final c in activeConditions)
             [
               c.name,
-              c.code ?? '',
+              formatCode(c.code, c.codeSystem) ?? '',
               c.onsetDate == null ? '' : _date.format(c.onsetDate!),
               src(c.source, c.originName),
             ],
@@ -191,7 +192,7 @@ Future<Uint8List> buildSummaryPdf(
           for (final c in pastConditions)
             [
               c.name,
-              c.code ?? '',
+              formatCode(c.code, c.codeSystem) ?? '',
               c.onsetDate == null ? '' : _date.format(c.onsetDate!),
               c.resolvedDate == null ? '' : _date.format(c.resolvedDate!),
               src(c.source, c.originName),
@@ -319,7 +320,10 @@ Future<Uint8List> buildSummaryPdf(
               ))
                 pw.Text(
                   'Tanı / Diagnosis: ${d.name}'
-                  '${d.code != null ? ' (${d.code})' : ''}'
+                  '${switch (formatCode(d.code, d.codeSystem)) {
+                    final code? => ' ($code)',
+                    _ => '',
+                  }}'
                   '${d.verification == 'provisional' ? ' — ön tanı / provisional' : ''}',
                   style: const pw.TextStyle(fontSize: 9),
                 ),

@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'lokman'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +47,26 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(encounters, encounters.location);
         await m.addColumn(encounters, encounters.note);
         await m.addColumn(medications, medications.encounterId);
+      }
+      if (from < 4) {
+        // Hastalık ve tanı kodlarının kod sistemi (ICD-11 terminoloji paketi).
+        await m.addColumn(conditions, conditions.codeSystem);
+        await m.addColumn(diagnoses, diagnoses.codeSystem);
+        // Eski kayıtlarda sistem yazılmıyordu: kodun biçiminden çıkarırız.
+        // v0.1'de kod yalnızca içe aktarımla gelebiliyordu ve ICD-10 biçimi
+        // (`I10`, `J02.9`) dışındaki kodlar sistemsiz saklanıyordu.
+        for (final table in ['conditions', 'diagnoses']) {
+          await customStatement(
+            "UPDATE $table SET code_system = 'http://hl7.org/fhir/sid/icd-10' "
+            "WHERE code IS NOT NULL AND code GLOB '[A-Z][0-9][0-9]*'",
+          );
+          await customStatement(
+            'UPDATE $table SET code_system = '
+            "'http://id.who.int/icd/release/11/mms' "
+            'WHERE code_system IS NULL AND code IS NOT NULL '
+            "AND code GLOB '[0-9A-Z][A-Z][0-9A-Z][0-9A-Z]*'",
+          );
+        }
       }
     },
     beforeOpen: (details) async {

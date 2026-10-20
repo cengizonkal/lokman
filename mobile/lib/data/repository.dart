@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import '../domain/terminology/icd11.dart';
+import '../fhir/fhir_common.dart' show FhirSystems;
 import 'db/database.dart';
 
 abstract final class SettingKeys {
@@ -10,6 +12,9 @@ abstract final class SettingKeys {
   static const notifyDoses = 'notify_doses';
   static const notifyVaccines = 'notify_vaccines';
   static const notifyAppointments = 'notify_appointments';
+
+  /// Kodsuz kayıtların eşleştirildiği terminoloji paketi sürümü.
+  static const terminologyPackage = 'terminology_package';
 }
 
 /// Uygulamanın tüm veri erişimi. Ekranlar doğrudan veritabanını değil bu
@@ -115,10 +120,19 @@ class Repository {
             ]))
           .watch();
 
+  /// Kaydı ekler, aynı kimlikte kayıt varsa günceller.
+  ///
+  /// `toColumns(false)`: drift ekleme yaparken null alanları "verilmemiş"
+  /// sayar ve güncellemede eski değeri bırakırdı; o yüzden boşaltılan alanlar
+  /// (ör. adı değişince düşen tanı kodu, silinen not) kayıtta kalıyordu.
+  /// Burada null'lar açıkça yazılır; verilmemiş alanlar (`Value.absent()`)
+  /// yine varsayılanını alır.
   Future<void> save<T extends Table, D>(
     TableInfo<T, D> table,
     Insertable<D> row,
-  ) => db.into(table).insertOnConflictUpdate(row);
+  ) => db
+      .into(table)
+      .insertOnConflictUpdate(RawValuesInsertable<D>(row.toColumns(false)));
 
   Future<void> deleteRecord<T extends RecordColumns, D>(
     TableInfo<T, D> table,
@@ -238,6 +252,67 @@ class Repository {
 
   Stream<List<Diagnosis>> watchDiagnoses(String profileId) =>
       _watchByProfile(db.diagnoses, profileId, (t) => t.createdAt);
+
+  // ------------------------------------------------------- Terminoloji
+
+  /// Terminoloji paketi yenilendiğinde kodsuz kayıtları bir kez eşleştirir.
+  /// Paket büyük olduğu için [load] yalnızca gerçekten gerekiyorsa çağrılır.
+  /// Eşleşen kayıt sayısını döndürür.
+  Future<int> applyTerminologyPackage(
+    Future<Icd11Catalog> Function() load,
+  ) async {
+    if (await getSetting(SettingKeys.terminologyPackage) ==
+        Icd11Asset.release) {
+      return 0;
+    }
+    final matched = await matchCodelessRecords(await load());
+    await setSetting(SettingKeys.terminologyPackage, Icd11Asset.release);
+    return matched;
+  }
+
+  /// Kullanıcının kendi girdiği, kodu olmayan hastalık ve tanılara katalogdaki
+  /// karşılığını yazar. Yalnızca ad katalogda birebir ve tek bir kategoriye
+  /// eşleşirse kod yazılır; emin olunamayan kayıt olduğu gibi kalır (kullanıcı
+  /// kaydı düzenlerken listeden seçebilir). Klinikten gelen kayıtlara
+  /// dokunulmaz: onlar kurumun gönderdiği gibi durur.
+  Future<int> matchCodelessRecords(Icd11Catalog catalog) async {
+    var matched = 0;
+    await db.transaction(() async {
+      final conditions =
+          await (db.select(db.conditions)..where(
+                (t) => t.code.isNull() & t.source.equals(RecordSource.self),
+              ))
+              .get();
+      for (final c in conditions) {
+        final hit = catalog.byExactTerm(c.name);
+        if (hit == null) continue;
+        await (db.update(db.conditions)..where((t) => t.id.equals(c.id))).write(
+          ConditionsCompanion(
+            code: Value(hit.code),
+            codeSystem: const Value(FhirSystems.icd11),
+          ),
+        );
+        matched++;
+      }
+      final diagnoses =
+          await (db.select(db.diagnoses)..where(
+                (t) => t.code.isNull() & t.source.equals(RecordSource.self),
+              ))
+              .get();
+      for (final d in diagnoses) {
+        final hit = catalog.byExactTerm(d.name);
+        if (hit == null) continue;
+        await (db.update(db.diagnoses)..where((t) => t.id.equals(d.id))).write(
+          DiagnosesCompanion(
+            code: Value(hit.code),
+            codeSystem: const Value(FhirSystems.icd11),
+          ),
+        );
+        matched++;
+      }
+    });
+    return matched;
+  }
 
   Stream<List<ImportRecord>> watchImportHistory() => (db.select(
     db.importHistory,
