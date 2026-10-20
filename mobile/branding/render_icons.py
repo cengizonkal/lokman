@@ -1,9 +1,11 @@
-"""Lokman logosunu (beyaz kalp içinde hilal oyuğu) üretir.
+"""Lokman logosunu (beyaz karo üzerinde mavi çerçeve içinde ters üçgen) üretir.
 
 Tek doğruluk kaynağı bu betikteki geometridir. Çalıştırınca:
   - branding/lokman-logo.svg
+  - android/app/src/main/res/drawable/ic_launcher_foreground.xml (uyarlanabilir simge ön planı)
+  - android/app/src/main/res/drawable/ic_notification.xml
   - android/app/src/main/res/mipmap-*/ic_launcher.png (Android 7 ve öncesi)
-dosyalarını yeniden yazar ve Android vektör ön planı için pathData'yı yazdırır.
+dosyalarını yeniden yazar ve lib/widgets/lokman_logo.dart için yol komutlarını yazdırır.
 
 Kullanım (mobile/ klasöründen): python3 branding/render_icons.py
 """
@@ -13,83 +15,113 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-TEAL = (0x00, 0x69, 0x6B, 255)
-WHITE = (255, 255, 255, 255)
+WHITE = "#FFFFFF"
+DEEP_BLUE = "#0D47A1"  # çerçeve
+BLUE = "#1E88E5"  # üçgen
 
-# Kalp: 48x48 birimlik alanda, Android vektöründeki yolun mutlak koordinatlı hali.
-HEART_START = (24.0, 46.3)
-HEART_SEGMENTS = [
-    ("L", (21.1, 43.66)),
-    ("C", (10.8, 34.32), (4.0, 28.16), (4.0, 20.6)),
-    ("C", (4.0, 14.44), (8.84, 9.6), (15.0, 9.6)),
-    ("C", (18.48, 9.6), (21.82, 11.22), (24.0, 13.78)),
-    ("C", (26.18, 11.22), (29.52, 9.6), (33.0, 9.6)),
-    ("C", (39.16, 9.6), (44.0, 14.44), (44.0, 20.6)),
-    ("C", (44.0, 28.16), (37.2, 34.32), (26.9, 43.68)),
-    ("L", (24.0, 46.3)),
+STROKE = 3.6  # çizgi kalınlığı (48x48 birimlik alanda)
+
+# Her şekil, köşeleri yuvarlatılmış kalın bir çizgidir: "çekirdek" çokgen dışa doğru
+# d kadar büyütülür (köşelerde d yarıçaplı yay). Dış kenar d_dış, iç kenar d_dış - STROKE.
+# Çokgenler ekranda saat yönünde sıralıdır (y aşağı).
+
+# Çerçeve: dış sınırı 4..44, köşe yarıçapı 9.
+FRAME_CORE = [(13.0, 13.0), (35.0, 13.0), (35.0, 35.0), (13.0, 35.0)]
+FRAME_OUTER = 9.0
+
+# Üçgen: ucu aşağı bakan eşkenar; dış sınırının kutusu ortada, genişliği 24.
+TRI_WIDTH = 16.0
+TRI_HEIGHT = TRI_WIDTH * math.sqrt(3) / 2
+TRI_OUTER = 4.0
+TRI_TOP = 24.0 - (TRI_HEIGHT + 2 * TRI_OUTER) / 2 + TRI_OUTER
+TRI_CORE = [
+    (24.0 - TRI_WIDTH / 2, TRI_TOP),
+    (24.0 + TRI_WIDTH / 2, TRI_TOP),
+    (24.0, TRI_TOP + TRI_HEIGHT),
 ]
-HEART_PATH = (
-    "M24,46.3L21.1,43.66C10.8,34.32 4,28.16 4,20.6C4,14.44 8.84,9.6 15,9.6"
-    "C18.48,9.6 21.82,11.22 24,13.78C26.18,11.22 29.52,9.6 33,9.6"
-    "C39.16,9.6 44,14.44 44,20.6C44,28.16 37.2,34.32 26.9,43.68L24,46.3Z"
-)
-
-# Hilal: dış daireden, sağa kaydırılmış iç dairenin çıkarılmasıyla oluşur (ağzı sağa bakar).
-OUTER = ((22.6, 27.0), 10.0)
-INNER = ((26.4, 25.6), 8.2)
-
-
-def circle_intersections(c1, r1, c2, r2):
-    (x1, y1), (x2, y2) = c1, c2
-    d = math.hypot(x2 - x1, y2 - y1)
-    a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
-    h = math.sqrt(r1 * r1 - a * a)
-    xm, ym = x1 + a * (x2 - x1) / d, y1 + a * (y2 - y1) / d
-    p = (xm + h * (y2 - y1) / d, ym - h * (x2 - x1) / d)
-    q = (xm - h * (y2 - y1) / d, ym + h * (x2 - x1) / d)
-    return sorted([p, q], key=lambda pt: pt[1])  # üstteki önce
 
 
 def fmt(v):
-    return f"{v:.2f}".rstrip("0").rstrip(".")
+    s = f"{v:.2f}".rstrip("0").rstrip(".")
+    return "0" if s == "-0" else s
 
 
-def crescent_path():
-    (c1, r1), (c2, r2) = OUTER, INNER
-    top, bottom = circle_intersections(c1, r1, c2, r2)
-    # Üstten dış dairenin sol (uzun) yayıyla alta, iç dairenin sol yayıyla tekrar üste.
-    return (
-        f"M{fmt(top[0])},{fmt(top[1])}"
-        f"A{fmt(r1)},{fmt(r1)} 0 1,0 {fmt(bottom[0])},{fmt(bottom[1])}"
-        f"A{fmt(r2)},{fmt(r2)} 0 0,1 {fmt(top[0])},{fmt(top[1])}Z"
-    )
+def outward_normals(poly):
+    cx = sum(p[0] for p in poly) / len(poly)
+    cy = sum(p[1] for p in poly) / len(poly)
+    normals = []
+    for i, a in enumerate(poly):
+        b = poly[(i + 1) % len(poly)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length = math.hypot(dx, dy)
+        n = (dy / length, -dx / length)
+        mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        if n[0] * (mx - cx) + n[1] * (my - cy) < 0:
+            n = (-n[0], -n[1])
+        normals.append(n)
+    return normals
 
 
-def bezier(p0, p1, p2, p3, n=40):
-    for i in range(1, n + 1):
-        t = i / n
-        mt = 1 - t
-        yield (
-            mt**3 * p0[0] + 3 * mt * mt * t * p1[0] + 3 * mt * t * t * p2[0] + t**3 * p3[0],
-            mt**3 * p0[1] + 3 * mt * mt * t * p1[1] + 3 * mt * t * t * p2[1] + t**3 * p3[1],
-        )
+def ring(poly, d):
+    """Çekirdeği d kadar büyütülmüş yuvarlak köşeli şekil: [başlangıç, (kenar sonu, yay sonu, merkez)...]."""
+    normals = outward_normals(poly)
+    k = len(poly)
+    start = (poly[0][0] + d * normals[0][0], poly[0][1] + d * normals[0][1])
+    steps = []
+    for i in range(k):
+        v = poly[(i + 1) % k]
+        n_in, n_out = normals[i], normals[(i + 1) % k]
+        line_end = (v[0] + d * n_in[0], v[1] + d * n_in[1])
+        arc_end = (v[0] + d * n_out[0], v[1] + d * n_out[1])
+        steps.append((line_end, arc_end, v))
+    return start, steps, d
 
 
-def heart_polygon():
-    pts = [HEART_START]
-    cur = HEART_START
-    for seg in HEART_SEGMENTS:
-        if seg[0] == "L":
-            cur = seg[1]
-            pts.append(cur)
-        else:
-            pts.extend(bezier(cur, seg[1], seg[2], seg[3]))
-            cur = seg[3]
+def svg_path(r, scale=1.0, dx=0.0, dy=0.0):
+    start, steps, d = r
+    t = lambda p: f"{fmt(dx + p[0] * scale)},{fmt(dy + p[1] * scale)}"
+    out = f"M{t(start)}"
+    for line_end, arc_end, _ in steps:
+        out += f"L{t(line_end)}A{fmt(d * scale)},{fmt(d * scale)} 0 0,1 {t(arc_end)}"
+    return out + "Z"
+
+
+def dart_path(r):
+    start, steps, d = r
+    o = lambda p: f"{fmt(p[0])}, {fmt(p[1])}"
+    lines = [f"..moveTo({o(start)})"]
+    for line_end, arc_end, _ in steps:
+        lines.append(f"..lineTo({o(line_end)})")
+        lines.append(f"..arcToPoint(const Offset({o(arc_end)}), radius: const Radius.circular({fmt(d)}))")
+    lines.append("..close()")
+    return "\n".join(lines)
+
+
+def polygon(r, n=24):
+    start, steps, d = r
+    pts = [start]
+    for line_end, arc_end, c in steps:
+        pts.append(line_end)
+        a0 = math.atan2(line_end[1] - c[1], line_end[0] - c[0])
+        a1 = math.atan2(arc_end[1] - c[1], arc_end[0] - c[0])
+        if a1 < a0:
+            a1 += 2 * math.pi
+        for i in range(1, n + 1):
+            a = a0 + (a1 - a0) * i / n
+            pts.append((c[0] + d * math.cos(a), c[1] + d * math.sin(a)))
     return pts
 
 
-def circle_polygon(center, r, n=180):
-    return [(center[0] + r * math.cos(2 * math.pi * i / n), center[1] + r * math.sin(2 * math.pi * i / n)) for i in range(n)]
+FRAME = (ring(FRAME_CORE, FRAME_OUTER), ring(FRAME_CORE, FRAME_OUTER - STROKE))
+TRIANGLE = (ring(TRI_CORE, TRI_OUTER), ring(TRI_CORE, TRI_OUTER - STROKE))
+
+
+def shape_path(shape, **kw):
+    return svg_path(shape[0], **kw) + svg_path(shape[1], **kw)
+
+
+def hex_rgba(h):
+    return tuple(int(h[i : i + 2], 16) for i in (1, 3, 5)) + (255,)
 
 
 def render_png(size, out):
@@ -97,33 +129,80 @@ def render_png(size, out):
     s = size * ss
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.ellipse([0, 0, s - 1, s - 1], fill=TEAL)
-    scale = s * 0.6 / 40.0  # kalp genişliği (40 birim) simgenin %60'ı
-    ox, oy = s / 2 - 24 * scale, s / 2 - 27.5 * scale
-    tr = lambda pts: [(ox + x * scale, oy + y * scale) for x, y in pts]
-    d.polygon(tr(heart_polygon()), fill=WHITE)
-    # Hilal oyuğu: dış daireyi zemin rengiyle, iç daireyi kalp rengiyle boya.
-    d.polygon(tr(circle_polygon(*OUTER)), fill=TEAL)
-    d.polygon(tr(circle_polygon(*INNER)), fill=WHITE)
+    scale = s * 0.92 / 40.0  # çerçeve (40 birim) simgenin %92'si
+    o = s / 2 - 24 * scale
+    tr = lambda pts: [(o + x * scale, o + y * scale) for x, y in pts]
+    # Dış halkayı renkle, iç halkayı karo rengiyle boya.
+    d.polygon(tr(polygon(FRAME[0])), fill=hex_rgba(DEEP_BLUE))
+    d.polygon(tr(polygon(FRAME[1])), fill=hex_rgba(WHITE))
+    d.polygon(tr(polygon(TRIANGLE[0])), fill=hex_rgba(BLUE))
+    d.polygon(tr(polygon(TRIANGLE[1])), fill=hex_rgba(WHITE))
     img.resize((size, size), Image.LANCZOS).save(out)
 
 
 def main():
     root = Path(__file__).resolve().parent.parent
-    crescent = crescent_path()
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="512" height="512">
+    res = root / "android/app/src/main/res"
+
+    (root / "branding" / "lokman-logo.svg").write_text(
+        f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="512" height="512">
   <title>Lokman</title>
-  <circle cx="24" cy="24" r="24" fill="#00696B"/>
-  <g transform="translate(24 24) scale(0.72) translate(-24 -27.5)">
-    <path fill="#FFFFFF" fill-rule="evenodd" d="{HEART_PATH}{crescent}"/>
-  </g>
+  <path fill="{WHITE}" d="{svg_path(FRAME[0])}"/>
+  <path fill="{DEEP_BLUE}" fill-rule="evenodd" d="{shape_path(FRAME)}"/>
+  <path fill="{BLUE}" fill-rule="evenodd" d="{shape_path(TRIANGLE)}"/>
 </svg>
 """
-    (root / "branding" / "lokman-logo.svg").write_text(svg)
+    )
+
+    # Uyarlanabilir simge: 108dp tuval, maske dairesi 66dp çaplı güvenli alan; çerçeve 52dp.
+    fg = dict(scale=1.3, dx=54 - 24 * 1.3, dy=54 - 24 * 1.3)
+    (res / "drawable" / "ic_launcher_foreground.xml").write_text(
+        f"""<?xml version="1.0" encoding="utf-8"?>
+<!-- Uygulama simgesi ön planı: mavi çerçeve içinde ters üçgen (108dp, güvenli alan 66dp).
+     Arka plan beyazdır (values/ic_launcher_background.xml). Şekiller oyuk olduğu için
+     temalı (monochrome) simgede de görünür.
+     Bu dosya branding/render_icons.py ile üretilir; elle düzenlemeyin. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF{DEEP_BLUE[1:]}"
+        android:fillType="evenOdd"
+        android:pathData="{shape_path(FRAME, **fg)}" />
+    <path
+        android:fillColor="#FF{BLUE[1:]}"
+        android:fillType="evenOdd"
+        android:pathData="{shape_path(TRIANGLE, **fg)}" />
+</vector>
+"""
+    )
+
+    (res / "drawable" / "ic_notification.xml").write_text(
+        f"""<?xml version="1.0" encoding="utf-8"?>
+<!-- Bildirim simgesi: tek renkli (beyaz) çerçeve içinde ters üçgen.
+     Bu dosya branding/render_icons.py ile üretilir; elle düzenlemeyin. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="{shape_path(FRAME, scale=0.5)}{shape_path(TRIANGLE, scale=0.5)}" />
+</vector>
+"""
+    )
+
     for folder, size in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():
-        render_png(size, root / "android/app/src/main/res" / f"mipmap-{folder}" / "ic_launcher.png")
-    print("Android pathData:")
-    print(HEART_PATH + crescent)
+        render_png(size, res / f"mipmap-{folder}" / "ic_launcher.png")
+
+    for name, shape in (("frame", FRAME), ("triangle", TRIANGLE)):
+        print(f"// {name}")
+        print(dart_path(shape[0]))
+        print(dart_path(shape[1]))
 
 
 if __name__ == "__main__":

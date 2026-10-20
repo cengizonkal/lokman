@@ -2,6 +2,7 @@
 
 ## Yayınlanmamış
 
+- **Yeni logo:** mavi çerçeve içinde ters üçgen, mavi-beyaz tonlarda. Uygulama simgesi, bildirim simgesi ve karşılama ekranı yeni logoyu kullanır.
 - **Geçirilmiş hastalıklar:** "Kronik hastalıklar" bölümünün adı "Hastalıklar" oldu. Zatürre, sarılık gibi geçirdiğiniz hastalıkları da başlangıç ve iyileşme tarihiyle ekleyebilirsiniz; liste "Devam eden" ve "Geçirilmiş" olarak ayrılır. Sağlık dosyasında IPS'in geçirilmiş hastalıklar bölümüne, PDF özette ayrı tabloya yazılır.
 - Klinikten "iyileşti" olarak gelen hastalıklar artık devam eden hastalık gibi görünmez.
 

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Lokman logosu: renkli daire üzerinde beyaz kalp, kalbin içinde hilal oyuğu.
+/// Lokman logosu: beyaz karo üzerinde mavi çerçeve, içinde ters üçgen.
 /// Geometri uygulama simgesiyle aynıdır (kaynak: branding/render_icons.py).
 class LokmanLogo extends StatelessWidget {
-  const LokmanLogo({super.key, this.size = 72, this.color});
+  const LokmanLogo({super.key, this.size = 72});
 
   final double size;
-
-  /// Daire rengi; verilmezse temanın birincil rengi.
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -17,62 +14,89 @@ class LokmanLogo extends StatelessWidget {
       image: true,
       child: CustomPaint(
         size: Size.square(size),
-        painter: _LogoPainter(color ?? Theme.of(context).colorScheme.primary),
+        painter: const _LogoPainter(),
       ),
     );
   }
 }
 
 class _LogoPainter extends CustomPainter {
-  _LogoPainter(this.color);
+  const _LogoPainter();
 
-  final Color color;
+  static const _deepBlue = Color(0xFF0D47A1);
+  static const _blue = Color(0xFF1E88E5);
 
-  // 48x48 birimlik alanda kalp ve hilal (render_icons.py ile aynı değerler).
-  static Path _mark() {
+  // 48x48 birimlik alanda (render_icons.py çıktısıyla aynı değerler).
+  static Path _frameOuter() {
     return Path()
-      ..moveTo(24, 46.3)
-      ..lineTo(21.1, 43.66)
-      ..cubicTo(10.8, 34.32, 4, 28.16, 4, 20.6)
-      ..cubicTo(4, 14.44, 8.84, 9.6, 15, 9.6)
-      ..cubicTo(18.48, 9.6, 21.82, 11.22, 24, 13.78)
-      ..cubicTo(26.18, 11.22, 29.52, 9.6, 33, 9.6)
-      ..cubicTo(39.16, 9.6, 44, 14.44, 44, 20.6)
-      ..cubicTo(44, 28.16, 37.2, 34.32, 26.9, 43.68)
+      ..moveTo(13, 4)
+      ..lineTo(35, 4)
+      ..arcToPoint(const Offset(44, 13), radius: const Radius.circular(9))
+      ..lineTo(44, 35)
+      ..arcToPoint(const Offset(35, 44), radius: const Radius.circular(9))
+      ..lineTo(13, 44)
+      ..arcToPoint(const Offset(4, 35), radius: const Radius.circular(9))
+      ..lineTo(4, 13)
+      ..arcToPoint(const Offset(13, 4), radius: const Radius.circular(9))
+      ..close();
+  }
+
+  static Path _frame() {
+    return _frameOuter()
+      ..moveTo(13, 7.6)
+      ..lineTo(35, 7.6)
+      ..arcToPoint(const Offset(40.4, 13), radius: const Radius.circular(5.4))
+      ..lineTo(40.4, 35)
+      ..arcToPoint(const Offset(35, 40.4), radius: const Radius.circular(5.4))
+      ..lineTo(13, 40.4)
+      ..arcToPoint(const Offset(7.6, 35), radius: const Radius.circular(5.4))
+      ..lineTo(7.6, 13)
+      ..arcToPoint(const Offset(13, 7.6), radius: const Radius.circular(5.4))
       ..close()
-      ..moveTo(25.55, 17.44)
+      ..fillType = PathFillType.evenOdd;
+  }
+
+  static Path _triangle() {
+    return Path()
+      ..moveTo(16, 13.07)
+      ..lineTo(32, 13.07)
+      ..arcToPoint(const Offset(35.46, 19.07), radius: const Radius.circular(4))
+      ..lineTo(27.46, 32.93)
+      ..arcToPoint(const Offset(20.54, 32.93), radius: const Radius.circular(4))
+      ..lineTo(12.54, 19.07)
+      ..arcToPoint(const Offset(16, 13.07), radius: const Radius.circular(4))
+      ..close()
+      ..moveTo(16, 16.67)
+      ..lineTo(32, 16.67)
       ..arcToPoint(
-        const Offset(31.04, 32.36),
-        radius: const Radius.circular(10),
-        largeArc: true,
-        clockwise: false,
+        const Offset(32.35, 17.27),
+        radius: const Radius.circular(0.4),
       )
+      ..lineTo(24.35, 31.13)
       ..arcToPoint(
-        const Offset(25.55, 17.44),
-        radius: const Radius.circular(8.2),
+        const Offset(23.65, 31.13),
+        radius: const Radius.circular(0.4),
       )
+      ..lineTo(15.65, 17.27)
+      ..arcToPoint(const Offset(16, 16.67), radius: const Radius.circular(0.4))
       ..close()
       ..fillType = PathFillType.evenOdd;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final unit = size.shortestSide / 48;
-    canvas.drawCircle(
-      size.center(Offset.zero),
-      size.shortestSide / 2,
-      Paint()..color = color,
-    );
+    // Çerçeve 4..44 birim; logoyu kutuya tam sığdır.
+    final unit = size.shortestSide / 40;
     canvas
       ..save()
       ..scale(unit)
-      ..translate(24, 24)
-      ..scale(0.72)
-      ..translate(-24, -27.5)
-      ..drawPath(_mark(), Paint()..color = Colors.white)
+      ..translate(-4, -4)
+      ..drawPath(_frameOuter(), Paint()..color = Colors.white)
+      ..drawPath(_frame(), Paint()..color = _deepBlue)
+      ..drawPath(_triangle(), Paint()..color = _blue)
       ..restore();
   }
 
   @override
-  bool shouldRepaint(_LogoPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(_LogoPainter oldDelegate) => false;
 }
