@@ -167,6 +167,125 @@ void main() {
     },
   );
 
+  test(
+    'geçirilmiş hastalık ayrı bölümde dışa aktarılır, durumu korunur',
+    () async {
+      final profileId = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ali'),
+      );
+      await repo.save(
+        repo.db.conditions,
+        ConditionsCompanion.insert(profileId: profileId, name: 'Astım'),
+      );
+      await repo.save(
+        repo.db.conditions,
+        ConditionsCompanion.insert(
+          profileId: profileId,
+          name: 'Zatürre (pnömoni)',
+          onsetDate: Value(DateTime(2019, 3, 2)),
+          status: const Value(ConditionStatus.resolved),
+          resolvedDate: Value(DateTime(2019, 3, 20)),
+        ),
+      );
+
+      final bundle = buildBundle(
+        await ExportData.load(repo.db, profileId),
+        appId: await repo.appId(),
+      );
+      final entries = [
+        for (final e in bundle['entry'] as List) e['resource'] as Map,
+      ];
+      final sections = entries.first['section'] as List;
+      List<String> names(String loinc) {
+        final section = sections.firstWhere(
+          (s) => s['code']['coding'][0]['code'] == loinc,
+        );
+        final urls = [for (final e in section['entry'] as List) e['reference']];
+        return [
+          for (final e in bundle['entry'] as List)
+            if (urls.contains(e['fullUrl'])) e['resource']['code']['text'],
+        ];
+      }
+
+      expect(names('11450-4'), ['Astım']);
+      expect(names('11348-0'), ['Zatürre (pnömoni)']);
+      final past = entries.firstWhere(
+        (r) => r['code']?['text'] == 'Zatürre (pnömoni)',
+      );
+      expect(past['clinicalStatus']['coding'][0]['code'], 'resolved');
+      expect(past['abatementDateTime'], '2019-03-20');
+
+      // Başka telefona aktarımda durum ve tarih korunur.
+      final other = memoryRepo();
+      addTearDown(other.db.close);
+      final otherImporter = Importer(other);
+      final parsed = await otherImporter.parse(encodeBundle(bundle));
+      final pid = await otherImporter.createProfileFrom(parsed.patient);
+      await otherImporter.apply(parsed, pid);
+      final conditions = await other.watchConditions(pid).first;
+      final asthma = conditions.firstWhere((c) => c.name == 'Astım');
+      final pneumonia = conditions.firstWhere((c) => c.name != 'Astım');
+      expect(asthma.status, ConditionStatus.active);
+      expect(asthma.resolvedDate, isNull);
+      expect(pneumonia.status, ConditionStatus.resolved);
+      expect(pneumonia.onsetDate, DateTime(2019, 3, 2));
+      expect(pneumonia.resolvedDate, DateTime(2019, 3, 20));
+    },
+  );
+
+  test('klinikten gelen hastalığın durumu okunur', () async {
+    Future<Condition> importWith(Map<String, dynamic> fields) async {
+      final json = jsonDecode(exampleBundle()) as Map<String, dynamic>;
+      final condition =
+          [for (final e in json['entry'] as List) e['resource'] as Map]
+              .firstWhere(
+                (r) =>
+                    r['resourceType'] == 'Condition' &&
+                    jsonEncode(r['category']).contains('problem-list-item'),
+              );
+      condition.remove('clinicalStatus');
+      condition.addAll(fields);
+      final r = memoryRepo();
+      addTearDown(r.db.close);
+      final imp = Importer(r);
+      final parsed = await imp.parse(jsonEncode(json));
+      final pid = await imp.createProfileFrom(parsed.patient);
+      await imp.apply(parsed, pid);
+      return (await r.watchConditions(pid).first).single;
+    }
+
+    Map<String, dynamic> status(String code) => {
+      'clinicalStatus': {
+        'coding': [
+          {
+            'system':
+                'http://terminology.hl7.org/CodeSystem/condition-clinical',
+            'code': code,
+          },
+        ],
+      },
+    };
+
+    final resolved = await importWith({
+      ...status('resolved'),
+      'abatementDateTime': '2024-05-01',
+    });
+    expect(resolved.status, ConditionStatus.resolved);
+    expect(resolved.resolvedDate, DateTime(2024, 5, 1));
+
+    final inactive = await importWith(status('inactive'));
+    expect(inactive.status, ConditionStatus.resolved);
+    expect(inactive.resolvedDate, isNull);
+
+    final remission = await importWith(status('remission'));
+    expect(remission.status, ConditionStatus.active);
+
+    // Durum yazılmamış ama bitiş tarihi var: geçmiş hastalık.
+    final noStatus = await importWith({'abatementDateTime': '2023-01-10'});
+    expect(noStatus.status, ConditionStatus.resolved);
+    expect((await importWith({})).status, ConditionStatus.active);
+  });
+
   test('geçersiz dosya anlaşılır hata verir', () async {
     expect(
       () => importer.parse('{"resourceType":"Patient"}'),

@@ -32,10 +32,17 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'lokman'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // Geçirilmiş hastalıklar: mevcut kayıtlar "devam ediyor" kalır.
+        await m.addColumn(conditions, conditions.status);
+        await m.addColumn(conditions, conditions.resolvedDate);
+      }
+    },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

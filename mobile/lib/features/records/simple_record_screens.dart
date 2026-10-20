@@ -184,7 +184,7 @@ class _AllergyFormState extends ConsumerState<AllergyForm> {
   );
 }
 
-// --------------------------------------------------------- Kronik hastalıklar
+// ----------------------------------------------------------------- Hastalıklar
 
 class ConditionsScreen extends ConsumerWidget {
   const ConditionsScreen({super.key});
@@ -194,51 +194,81 @@ class ConditionsScreen extends ConsumerWidget {
     final profile = ref.watch(currentProfileProvider);
     if (profile == null) return const SizedBox.shrink();
     final items = ref.watch(conditionsProvider(profile.id)).value ?? const [];
+    final active = items
+        .where((c) => c.status != ConditionStatus.resolved)
+        .toList();
+    final past = items
+        .where((c) => c.status == ConditionStatus.resolved)
+        .toList();
     return RecordListPage(
-      title: 'Kronik hastalıklar',
+      title: 'Hastalıklar',
       isEmpty: items.isEmpty,
       emptyIcon: Icons.monitor_heart_outlined,
       emptyTitle: 'Kayıtlı hastalık yok',
       emptyMessage:
-          'Tansiyon, şeker, astım gibi uzun süreli hastalıklarınızı ekleyin.',
+          'Tansiyon, şeker, astım gibi devam eden hastalıklarınızı ve '
+          'zatürre, sarılık gibi geçirdiğiniz hastalıkları ekleyin.',
       addLabel: 'Hastalık ekle',
       onAdd: () => openForm(context, const ConditionForm()),
       children: [
-        const SizedBox(height: 8),
-        for (final c in items)
-          RecordCard(
-            title: c.name,
-            subtitle: [
-              if (c.onsetDate != null) '${c.onsetDate!.year} yılından beri',
-              ?c.code,
-            ].join(' · '),
-            source: c.source,
-            originName: c.originName,
-            leading: const Icon(Icons.favorite_outline),
-            onTap: () => showRecordSheet(
-              context,
-              title: c.name,
-              source: c.source,
-              originName: c.originName,
-              details: [
-                InfoRow(
-                  'Başlangıç',
-                  c.onsetDate == null ? null : formatDay(c.onsetDate!),
-                ),
-                InfoRow('Kod (ICD-10)', c.code),
-                InfoRow('Not', c.note),
-              ],
-              onEdit: () => openForm(context, ConditionForm(edit: c)),
-              onDelete: () => deleteWithUndo(
-                context,
-                ref,
-                ref.read(databaseProvider).conditions,
-                c.id,
-                c,
-              ),
-            ),
-          ),
+        if (active.isNotEmpty) ...[
+          const SectionTitle('Devam eden'),
+          for (final c in active) _card(context, ref, c),
+        ],
+        if (past.isNotEmpty) ...[
+          const SectionTitle('Geçirilmiş'),
+          for (final c in past) _card(context, ref, c),
+        ],
       ],
+    );
+  }
+
+  Widget _card(BuildContext context, WidgetRef ref, Condition c) {
+    final resolved = c.status == ConditionStatus.resolved;
+    final onset = c.onsetDate?.year;
+    final end = c.resolvedDate?.year;
+    return RecordCard(
+      title: c.name,
+      subtitle: [
+        if (!resolved && onset != null) '$onset yılından beri',
+        if (resolved && onset != null && end != null)
+          onset == end ? '$end' : '$onset – $end',
+        if (resolved && onset == null && end != null) '$end yılında geçti',
+        if (resolved && onset != null && end == null) '$onset yılında başladı',
+        ?c.code,
+      ].join(' · '),
+      source: c.source,
+      originName: c.originName,
+      leading: Icon(
+        resolved ? Icons.check_circle_outline : Icons.favorite_outline,
+      ),
+      onTap: () => showRecordSheet(
+        context,
+        title: c.name,
+        source: c.source,
+        originName: c.originName,
+        details: [
+          InfoRow('Durum', resolved ? 'Geçti' : 'Devam ediyor'),
+          InfoRow(
+            'Başlangıç',
+            c.onsetDate == null ? null : formatDay(c.onsetDate!),
+          ),
+          InfoRow(
+            'Geçtiği tarih',
+            c.resolvedDate == null ? null : formatDay(c.resolvedDate!),
+          ),
+          InfoRow('Kod (ICD-10)', c.code),
+          InfoRow('Not', c.note),
+        ],
+        onEdit: () => openForm(context, ConditionForm(edit: c)),
+        onDelete: () => deleteWithUndo(
+          context,
+          ref,
+          ref.read(databaseProvider).conditions,
+          c.id,
+          c,
+        ),
+      ),
     );
   }
 }
@@ -256,6 +286,8 @@ class _ConditionFormState extends ConsumerState<ConditionForm> {
   late final _name = TextEditingController(text: widget.edit?.name ?? '');
   late final _note = TextEditingController(text: widget.edit?.note ?? '');
   late DateTime? _onset = widget.edit?.onsetDate;
+  late bool _resolved = widget.edit?.status == ConditionStatus.resolved;
+  late DateTime? _resolvedDate = widget.edit?.resolvedDate;
 
   @override
   void dispose() {
@@ -274,12 +306,15 @@ class _ConditionFormState extends ConsumerState<ConditionForm> {
           source: RecordSource.self,
           createdAt: DateTime.now(),
           name: '',
+          status: ConditionStatus.active,
         );
     await repo.save(
       repo.db.conditions,
       base.copyWith(
         name: _name.text.trim(),
         onsetDate: Value(_onset),
+        status: _resolved ? ConditionStatus.resolved : ConditionStatus.active,
+        resolvedDate: Value(_resolved ? _resolvedDate : null),
         note: Value(emptyToNull(_note.text)),
       ),
     );
@@ -291,22 +326,55 @@ class _ConditionFormState extends ConsumerState<ConditionForm> {
     canSave: _name.text.trim().isNotEmpty,
     onSave: _save,
     children: [
+      SegmentedButton<bool>(
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(
+            value: false,
+            label: Text('Devam ediyor'),
+            icon: Icon(Icons.favorite_outline),
+          ),
+          ButtonSegment(
+            value: true,
+            label: Text('Geçti'),
+            icon: Icon(Icons.check),
+          ),
+        ],
+        selected: {_resolved},
+        onSelectionChanged: (s) => setState(() => _resolved = s.first),
+      ),
+      formGap,
       SuggestField(
         controller: _name,
         label: 'Hastalığın adı *',
-        hint: 'Örn. Hipertansiyon',
-        suggestions: conditionSuggestions,
+        hint: _resolved ? 'Örn. Zatürre' : 'Örn. Hipertansiyon',
+        suggestions: _resolved
+            ? pastConditionSuggestions
+            : conditionSuggestions,
         autofocus: widget.edit == null,
         onChanged: () => setState(() {}),
       ),
       formGap,
       DateField(
-        label: 'Ne zamandan beri? (isteğe bağlı)',
+        label: _resolved
+            ? 'Ne zaman başladı? (isteğe bağlı)'
+            : 'Ne zamandan beri? (isteğe bağlı)',
         value: _onset,
         allowEmpty: true,
-        lastDate: DateTime.now(),
+        lastDate: _resolved ? _resolvedDate ?? DateTime.now() : DateTime.now(),
         onChanged: (v) => setState(() => _onset = v),
       ),
+      if (_resolved) ...[
+        formGap,
+        DateField(
+          label: 'Ne zaman geçti? (isteğe bağlı)',
+          value: _resolvedDate,
+          allowEmpty: true,
+          firstDate: _onset,
+          lastDate: DateTime.now(),
+          onChanged: (v) => setState(() => _resolvedDate = v),
+        ),
+      ],
       formGap,
       TextField(
         controller: _note,

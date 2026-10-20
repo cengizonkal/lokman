@@ -15,7 +15,8 @@
 | Bölüm | LOINC | İçerik | Boş olabilir mi |
 |---|---|---|---|
 | Alerjiler | `48765-2` | AllergyIntolerance | Hayır: boşsa `emptyReason` |
-| Aktif problemler | `11450-4` | Condition (`problem-list-item`) | Hayır: boşsa `emptyReason` |
+| Aktif problemler | `11450-4` | Condition (`problem-list-item`, devam eden) | Hayır: boşsa `emptyReason` |
+| Geçirilmiş hastalıklar | `11348-0` | Condition (`problem-list-item`, `clinicalStatus` = `resolved`) | Evet |
 | İlaçlar | `10160-0` | MedicationRequest | Hayır: boşsa `emptyReason` |
 | Aşılar | `11369-6` | Immunization | Evet (bölüm yazılmaz) |
 | Vital bulgular | `8716-3` | Observation | Evet |
@@ -63,13 +64,15 @@ Etiket yoksa kayıt, paketi üreten kurumun (Organization) kaydı sayılır. Kli
 |---|---|---|
 | `Encounter` | `encounters` | `period.start`, `participant[0].individual.display`, `reasonCode[].text`, eklentiler: `encounter-findings`, `encounter-plan` (`valueString`) |
 | `Condition` + `encounter-diagnosis` | `diagnoses` | `code` (ICD-11: `http://id.who.int/icd/release/11/mms`; eşleme lisansı uygunsa ek ICD-10 coding), `verificationStatus` (`provisional` / `confirmed`), `encounter`, `recordedDate` |
-| `Condition` (diğer) | `conditions` | `code`, `onsetDateTime`, `note` |
+| `Condition` (diğer) | `conditions` | `code`, `onsetDateTime`, `abatementDateTime`, `clinicalStatus`, `note` |
 | `AllergyIntolerance` | `allergies` | `code` (ATC ya da metin), `reaction[].manifestation[].text`, `criticality` |
 | `MedicationRequest` | `medications` | `medicationCodeableConcept` (ATC), `dosageInstruction[0]`: `text`, `doseAndRate[0].doseQuantity`, `timing.repeat.timeOfDay`, `boundsPeriod` / `boundsDuration`; `authoredOn`, `status`, `groupIdentifier` |
 | `Immunization` | `immunizations` | `vaccineCode`, `occurrenceDateTime`, `protocolApplied[0].doseNumberPositiveInt`, `lotNumber`, `primarySource` |
 | `ImmunizationRecommendation` | `immunization_due` | her `recommendation`: `vaccineCode[0]`, `dateCriterion[0].value` (`30980-7`), `doseNumberPositiveInt`, `forecastStatus` |
 | `Observation` | `observations` | LOINC `code`, `valueQuantity` (UCUM), tansiyon `component` (`8480-6` / `8462-4`), `effectiveDateTime` |
 | `Appointment` | `appointments` | `start`, `description`, `participant[].actor.display`; `cancelled` atlanır |
+
+**Hastalığın durumu:** mobil `clinicalStatus`'u `active` ya da `resolved` yazar; geçirilmiş hastalıkta bitiş tarihi `abatementDateTime`'dır. Okurken `inactive` ve `resolved` geçirilmiş, diğer değerler (`remission` dahil) devam eden sayılır. `clinicalStatus` yoksa `abatementDateTime` varlığına bakılır.
 
 Eklenti adresleri: `https://github.com/cengizonkal/lokman/fhir/StructureDefinition/<ad>`.
 

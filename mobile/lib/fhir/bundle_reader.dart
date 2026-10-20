@@ -389,6 +389,17 @@ class _BundleReader {
         }),
       ];
     }
+    final resolvedDate = parseFhirDate(r['abatementDateTime']);
+    // inactive / resolved geçmiş hastalıktır; durum yazılmamışsa bitiş
+    // tarihine bakılır. Diğer durumlar (remission dahil) devam eden sayılır.
+    final resolved = switch (conceptCode(
+      r['clinicalStatus'],
+      FhirSystems.conditionClinical,
+    )) {
+      'inactive' || 'resolved' => true,
+      null => resolvedDate != null,
+      _ => false,
+    };
     return [
       _Row(RecordKind.condition, db.conditions, (c) {
         return ConditionsCompanion.insert(
@@ -400,6 +411,10 @@ class _BundleReader {
           name: name,
           code: Value(code),
           onsetDate: Value(parseFhirDate(r['onsetDateTime'])),
+          status: Value(
+            resolved ? ConditionStatus.resolved : ConditionStatus.active,
+          ),
+          resolvedDate: Value(resolved ? resolvedDate : null),
           note: Value(_note(r)),
         );
       }),

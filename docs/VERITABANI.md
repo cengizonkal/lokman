@@ -202,7 +202,7 @@ FHIR: `AllergyIntolerance` (`code`: ATC kodu, yoksa yalnızca `text`). Onay bekl
 
 Panelde alerji girerken madde `atc_codes` ve ilaç katalogundaki etken maddelerden aranarak seçilir; bulunamazsa serbest metin girilir.
 
-### `patient_conditions`: kronik hastalıklar (problem listesi)
+### `patient_conditions`: kronik ve geçirilmiş hastalıklar (problem listesi)
 | Kolon | Tip | Not |
 |---|---|---|
 | id | uuid | PK |
@@ -211,7 +211,8 @@ Panelde alerji girerken madde `atc_codes` ve ilaç katalogundaki etken maddelerd
 | coding | jsonb | Ham kodlama (dosyadan gelen ya da katalogda olmayan kod) |
 | description | varchar(300) | not null (kod yoksa serbest metin) |
 | onset_date | date | |
-| status | varchar(10) | CHECK in (`active`, `resolved`), default `active` |
+| status | varchar(10) | CHECK in (`active`, `resolved`), default `active`. `resolved` = geçirilmiş hastalık |
+| resolved_date | date null | Hastalığın geçtiği tarih (FHIR `abatementDateTime`) |
 | note | text | |
 | source | varchar(20) | CHECK in (`clinic`, `patient_reported`, `external`) |
 | verification | varchar(10) | CHECK in (`verified`, `pending`, `rejected`) |
@@ -221,7 +222,7 @@ Panelde alerji girerken madde `atc_codes` ve ilaç katalogundaki etken maddelerd
 | created_by, timestamps, deleted_at | | |
 
 İndeks: `unique(origin_ref) WHERE origin_ref IS NOT NULL`
-FHIR: `Condition` (category = `problem-list-item`)
+FHIR: `Condition` (category = `problem-list-item`, `clinicalStatus` = `status`). Geçirilmiş hastalıklar IPS'te ayrı bölümde (`11348-0`) gider
 
 ### `consents`: kişisel veri aydınlatma ve açık rıza
 | Kolon | Tip | Not |
@@ -589,7 +590,7 @@ Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. He
 | `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları |
 | `observations` | Ölçümler (klinikten gelen + hastanın girdiği) |
 | `appointments` | Klinikten gelen gelecek randevular |
-| `allergies`, `conditions` | Alerji ve kronik hastalıklar. `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
+| `allergies`, `conditions` | Alerjiler, devam eden ve geçirilmiş hastalıklar (`conditions.status`: `active` / `resolved`, `resolved_date`). `source`: klinikten gelen ya da kullanıcının girdiği (ör. annenin çocuğu için girdiği alerji) |
 | `fhir_resources` | Her kaynağın ham FHIR JSON'u (`resource_type`, `id`, `profile_id`, `json`, `last_updated`). Kayıpsız dışa aktarım ve ileride yeni alanlar için |
 | `import_history` | Ne zaman, hangi klinikten, kaç kayıt geldi |
 | `app_settings` | Uygulama kurulum kimliği, bildirim tercihleri, son tam dışa aktarım zamanı (yedek hatırlatması için) |

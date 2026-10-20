@@ -157,6 +157,69 @@ void main() {
     await tearDownApp(tester, db);
   });
 
+  testWidgets('geçirilmiş hastalık eklenir ve ayrı grupta görünür', (
+    tester,
+  ) async {
+    final db = memoryDb();
+    await tester.runAsync(() async {
+      final repo = Repository(db);
+      final id = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ali'),
+      );
+      await repo.save(
+        db.conditions,
+        ConditionsCompanion.insert(profileId: id, name: 'Astım'),
+      );
+    });
+    await pumpApp(tester, db, onboarded: true);
+
+    await tester.tap(find.text('Kayıtlar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hastalıklar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Devam eden'), findsOneWidget);
+    expect(find.text('Geçirilmiş'), findsNothing);
+
+    await tester.tap(find.text('Hastalık ekle'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ne zamandan beri? (isteğe bağlı)'), findsOneWidget);
+    await tester.tap(find.text('Geçti'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ne zaman başladı? (isteğe bağlı)'), findsOneWidget);
+    expect(find.text('Ne zaman geçti? (isteğe bağlı)'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'Su çiçeği');
+    await tester.pump();
+    await tester.tap(find.text('Kaydet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Geçirilmiş'), findsOneWidget);
+    expect(find.text('Su çiçeği'), findsOneWidget);
+    final rows = (await tester.runAsync(db.select(db.conditions).get))!;
+    final chickenpox = rows.firstWhere((c) => c.name == 'Su çiçeği');
+    expect(chickenpox.status, ConditionStatus.resolved);
+    expect(chickenpox.source, RecordSource.self);
+
+    // Durum düzenlenince kayıt "Devam eden" grubuna geçer.
+    await tester.tap(find.text('Su çiçeği'));
+    await tester.pumpAndSettle();
+    expect(find.text('Geçti'), findsOneWidget);
+    await tester.tap(find.text('Düzenle'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Devam ediyor'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ne zaman geçti? (isteğe bağlı)'), findsNothing);
+    await tester.tap(find.text('Kaydet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Geçirilmiş'), findsNothing);
+    final edited = (await tester.runAsync(
+      (db.select(
+        db.conditions,
+      )..where((t) => t.name.equals('Su çiçeği'))).getSingle,
+    ))!;
+    expect(edited.status, ConditionStatus.active);
+    await tearDownApp(tester, db);
+  });
+
   testWidgets('klinikten aktarılan kayıtlar tüm ekranlarda görünür', (
     tester,
   ) async {
@@ -194,7 +257,7 @@ void main() {
     for (final (tile, expected) in [
       ('Aşılar', 'Tetanoz-difteri (Td)'),
       ('Alerjiler', 'Penisilin grubu'),
-      ('Kronik hastalıklar', 'Esansiyel hipertansiyon'),
+      ('Hastalıklar', 'Esansiyel hipertansiyon'),
       ('Ölçümler', '128/82 mmHg'),
       ('Randevular', 'Tansiyon kontrolü'),
       (

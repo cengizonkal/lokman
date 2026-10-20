@@ -16,7 +16,7 @@ Ailenin kişisel sağlık defteri (Flutter, Android). Veriler yalnızca telefond
 |---|---|
 | **Bugün** | Günün ilaç dozları (Aldım / Atladım), yaklaşan aşı ve randevular, son ölçümler, yedek hatırlatması |
 | **İlaçlar** | 4 adımlı ilaç ekleme (ad → doz → saatler → süre), saat bildirimleri, düzenli kullanım oranı |
-| **Kayıtlar** | Aşılar (yapılan + yapılacak), alerjiler, kronik hastalıklar, ölçümler (grafikli), randevular, muayeneler |
+| **Kayıtlar** | Aşılar (yapılan + yapılacak), alerjiler, hastalıklar (devam eden + geçirilmiş), ölçümler (grafikli), randevular, muayeneler |
 | **Paylaş** | QR okut / dosya seç ile içe aktarım; sağlık dosyası (.json) + PDF özet ile paylaşım ve yedek |
 
 Üst çubuktaki profil düğmesiyle aile üyeleri arasında geçilir. Klinikten gelen kayıtlar kurum adıyla etiketlenir ve değiştirilemez; kullanıcının girdikleri “Kendi girdiğim” olarak görünür.

@@ -165,7 +165,7 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 | Muayeneler | Klinik/kurum, tarih, doktor, şikayet, bulgular, öneriler, teşhisler, reçeteler |
 | İlaçlarım | Aktif ilaçlar, kullanım saatleri, bitiş tarihi, uyum oranı |
 | Aşılar | Yapılan aşılar, klinikten gelen planlanan aşılar, kendi girdikleri ("doğrulanmadı") |
-| Alerjiler ve hastalıklar | Klinikten gelen ve kendi girdiği alerji / kronik hastalıklar |
+| Alerjiler ve hastalıklar | Klinikten gelen ve kendi girdiği alerjiler, devam eden ve geçirilmiş hastalıklar |
 | Sağlık takibi | Ölçüm girişi ve grafikler |
 | İçe aktar | QR okut ya da dosya aç; profil eşleştirme |
 | Dışa aktar | Tüm veri ya da seçili kayıtlar → FHIR dosyası + PDF özet, Android paylaş menüsü |
@@ -184,7 +184,7 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 
 İki ürünün konuştuğu tek dil budur. Ayrıntılar `docs/fhir-sozlesmesi.md` dosyasında yazılacak (F0). `fhir/examples/` altındaki örnek paketleri hem backend hem mobil testleri kullanır.
 
-**IPS uyumu:** paket `Bundle.type = document`, ilk kaynak `Composition`. IPS'in zorunlu bölümleri (aktif problemler, alerjiler, ilaçlar) ve ilgili bölümleri (aşılar, vital bulgular, plan) bulunur. Lokman'a özgü kayıtlar (muayeneler, randevular, planlanan aşılar) ek bölümlerdir; Lokman dışı sistem bunları yok sayabilir, Lokman kayıpsız okur.
+**IPS uyumu:** paket `Bundle.type = document`, ilk kaynak `Composition`. IPS'in zorunlu bölümleri (aktif problemler, alerjiler, ilaçlar) ve ilgili bölümleri (geçirilmiş hastalıklar, aşılar, vital bulgular, plan) bulunur. Lokman'a özgü kayıtlar (muayeneler, randevular, planlanan aşılar) ek bölümlerdir; Lokman dışı sistem bunları yok sayabilir, Lokman kayıpsız okur.
 
 **PDF özet:** paketle aynı içerikten, Türkçe/İngilizce başlıklı, yazdırılabilir özet.
 
@@ -194,7 +194,7 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 | Hasta | `Patient` |
 | Muayene | `Encounter` (bulgular ve öneriler extension ile; iç not aktarılmaz) |
 | Teşhis | `Condition` (ICD-11, `encounter-diagnosis`, ön/kesin tanı = `verificationStatus`) |
-| Kronik hastalık | `Condition` (`problem-list-item`) |
+| Kronik / geçirilmiş hastalık | `Condition` (`problem-list-item`; geçirilmiş: `clinicalStatus` = `resolved`, `abatementDateTime`) |
 | Alerji | `AllergyIntolerance` |
 | Reçete kalemi | `MedicationRequest` (`groupIdentifier` ile gruplanır; saatler `timing.repeat.timeOfDay`) |
 | Aşı | `Immunization` |
@@ -301,6 +301,7 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 - [x] Muayeneler, ilaçlar, aşılar, alerjiler, ölçümler, randevular ekranları
 - [x] Bildirimler: doz saatleri, planlanan aşılar, randevular; aldım/atladım
 - [x] Kullanıcı girişleri: aşı, alerji, kronik hastalık, ölçüm
+- [x] Geçirilmiş hastalıklar: kullanıcı girişi, FHIR (`11348-0` bölümü) ve PDF özet
 - [x] Dışa aktarım: tüm veri / seçili kayıtlar, IPS uyumlu FHIR + PDF özet
 
 **Bitti sayılır:** Ayşe senaryosunun 4–6. adımları gerçek telefonda yapılır; telefondan alınan dosya panele aktarılır.

@@ -130,7 +130,14 @@ class _BundleWriter {
     };
 
     final allergies = data.allergies.map(_allergy).toList();
-    final problems = data.conditions.map(_condition).toList();
+    final problems = [
+      for (final c in data.conditions)
+        if (c.status != ConditionStatus.resolved) _condition(c),
+    ];
+    final pastIllnesses = [
+      for (final c in data.conditions)
+        if (c.status == ConditionStatus.resolved) _condition(c),
+    ];
     final meds = data.medications.map(_medication).toList();
     final immunizations = data.immunizations.map(_immunization).toList();
     final observations = data.observations.map(_observation).toList();
@@ -151,6 +158,11 @@ class _BundleWriter {
         '11450-4',
         problems,
         required: true,
+      ),
+      _section(
+        'Geçirilmiş hastalıklar / History of past illness',
+        '11348-0',
+        pastIllnesses,
       ),
       _section('İlaçlar / Medications', '10160-0', meds, required: true),
       _section('Aşılar / Immunizations', '11369-6', immunizations),
@@ -317,7 +329,12 @@ class _BundleWriter {
       _add('Condition', c.id, c.source, c.originName, c.originRef, {
         'clinicalStatus': {
           'coding': [
-            {'system': FhirSystems.conditionClinical, 'code': 'active'},
+            {
+              'system': FhirSystems.conditionClinical,
+              'code': c.status == ConditionStatus.resolved
+                  ? 'resolved'
+                  : 'active',
+            },
           ],
         },
         'category': [
@@ -333,6 +350,8 @@ class _BundleWriter {
         'code': _code(c.code, _icdPattern, FhirSystems.icd10, c.name),
         'subject': _patientRef,
         if (c.onsetDate != null) 'onsetDateTime': fhirDate(c.onsetDate!),
+        if (c.status == ConditionStatus.resolved && c.resolvedDate != null)
+          'abatementDateTime': fhirDate(c.resolvedDate!),
         if (c.note != null)
           'note': [
             {'text': c.note},

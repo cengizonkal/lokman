@@ -11,6 +11,12 @@ abstract final class RecordSource {
   static const self = 'self';
 }
 
+/// Hastalığın durumu (FHIR `Condition.clinicalStatus`).
+abstract final class ConditionStatus {
+  static const active = 'active';
+  static const resolved = 'resolved';
+}
+
 /// Profile bağlı tüm sağlık kayıtlarının ortak kolonları.
 mixin RecordColumns on Table {
   TextColumn get id => text().clientDefault(newId)();
@@ -179,10 +185,18 @@ class Allergies extends Table with RecordColumns {
   TextColumn get note => text().nullable()();
 }
 
+/// Devam eden ve geçirilmiş hastalıklar.
 class Conditions extends Table with RecordColumns {
   TextColumn get name => text()();
   TextColumn get code => text().nullable()();
   DateTimeColumn get onsetDate => dateTime().nullable()();
+
+  /// [ConditionStatus] değerlerinden biri.
+  TextColumn get status =>
+      text().withDefault(const Constant(ConditionStatus.active))();
+
+  /// Hastalığın geçtiği tarih (yalnızca geçirilmiş hastalıklarda).
+  DateTimeColumn get resolvedDate => dateTime().nullable()();
   TextColumn get note => text().nullable()();
 }
 

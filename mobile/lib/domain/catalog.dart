@@ -178,6 +178,23 @@ const conditionSuggestions = [
   'Böbrek yetmezliği',
 ];
 
+/// Geçirilmiş (iyileşmiş) hastalıklar için yaygın adlar.
+const pastConditionSuggestions = [
+  'Zatürre (pnömoni)',
+  'Hepatit A (sarılık)',
+  'Hepatit B',
+  'Su çiçeği',
+  'Kızamık',
+  'Kabakulak',
+  'Kızıl',
+  'Tüberküloz (verem)',
+  'COVID-19',
+  'Menenjit',
+  'Bruselloz',
+  'Böbrek taşı',
+  'İdrar yolu enfeksiyonu',
+];
+
 const doseSuggestions = [
   '1 tablet',
   '1/2 tablet',

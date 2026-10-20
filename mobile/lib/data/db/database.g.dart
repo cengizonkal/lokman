@@ -7125,6 +7125,27 @@ class $ConditionsTable extends Conditions
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(ConditionStatus.active),
+  );
+  static const VerificationMeta _resolvedDateMeta = const VerificationMeta(
+    'resolvedDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> resolvedDate = GeneratedColumn<DateTime>(
+    'resolved_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -7145,6 +7166,8 @@ class $ConditionsTable extends Conditions
     name,
     code,
     onsetDate,
+    status,
+    resolvedDate,
     note,
   ];
   @override
@@ -7214,6 +7237,21 @@ class $ConditionsTable extends Conditions
         onsetDate.isAcceptableOrUnknown(data['onset_date']!, _onsetDateMeta),
       );
     }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('resolved_date')) {
+      context.handle(
+        _resolvedDateMeta,
+        resolvedDate.isAcceptableOrUnknown(
+          data['resolved_date']!,
+          _resolvedDateMeta,
+        ),
+      );
+    }
     if (data.containsKey('note')) {
       context.handle(
         _noteMeta,
@@ -7265,6 +7303,14 @@ class $ConditionsTable extends Conditions
         DriftSqlType.dateTime,
         data['${effectivePrefix}onset_date'],
       ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      resolvedDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}resolved_date'],
+      ),
       note: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}note'],
@@ -7293,6 +7339,12 @@ class Condition extends DataClass implements Insertable<Condition> {
   final String name;
   final String? code;
   final DateTime? onsetDate;
+
+  /// [ConditionStatus] değerlerinden biri.
+  final String status;
+
+  /// Hastalığın geçtiği tarih (yalnızca geçirilmiş hastalıklarda).
+  final DateTime? resolvedDate;
   final String? note;
   const Condition({
     required this.id,
@@ -7304,6 +7356,8 @@ class Condition extends DataClass implements Insertable<Condition> {
     required this.name,
     this.code,
     this.onsetDate,
+    required this.status,
+    this.resolvedDate,
     this.note,
   });
   @override
@@ -7325,6 +7379,10 @@ class Condition extends DataClass implements Insertable<Condition> {
     }
     if (!nullToAbsent || onsetDate != null) {
       map['onset_date'] = Variable<DateTime>(onsetDate);
+    }
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || resolvedDate != null) {
+      map['resolved_date'] = Variable<DateTime>(resolvedDate);
     }
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
@@ -7349,6 +7407,10 @@ class Condition extends DataClass implements Insertable<Condition> {
       onsetDate: onsetDate == null && nullToAbsent
           ? const Value.absent()
           : Value(onsetDate),
+      status: Value(status),
+      resolvedDate: resolvedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolvedDate),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
     );
   }
@@ -7368,6 +7430,8 @@ class Condition extends DataClass implements Insertable<Condition> {
       name: serializer.fromJson<String>(json['name']),
       code: serializer.fromJson<String?>(json['code']),
       onsetDate: serializer.fromJson<DateTime?>(json['onsetDate']),
+      status: serializer.fromJson<String>(json['status']),
+      resolvedDate: serializer.fromJson<DateTime?>(json['resolvedDate']),
       note: serializer.fromJson<String?>(json['note']),
     );
   }
@@ -7384,6 +7448,8 @@ class Condition extends DataClass implements Insertable<Condition> {
       'name': serializer.toJson<String>(name),
       'code': serializer.toJson<String?>(code),
       'onsetDate': serializer.toJson<DateTime?>(onsetDate),
+      'status': serializer.toJson<String>(status),
+      'resolvedDate': serializer.toJson<DateTime?>(resolvedDate),
       'note': serializer.toJson<String?>(note),
     };
   }
@@ -7398,6 +7464,8 @@ class Condition extends DataClass implements Insertable<Condition> {
     String? name,
     Value<String?> code = const Value.absent(),
     Value<DateTime?> onsetDate = const Value.absent(),
+    String? status,
+    Value<DateTime?> resolvedDate = const Value.absent(),
     Value<String?> note = const Value.absent(),
   }) => Condition(
     id: id ?? this.id,
@@ -7409,6 +7477,8 @@ class Condition extends DataClass implements Insertable<Condition> {
     name: name ?? this.name,
     code: code.present ? code.value : this.code,
     onsetDate: onsetDate.present ? onsetDate.value : this.onsetDate,
+    status: status ?? this.status,
+    resolvedDate: resolvedDate.present ? resolvedDate.value : this.resolvedDate,
     note: note.present ? note.value : this.note,
   );
   Condition copyWithCompanion(ConditionsCompanion data) {
@@ -7424,6 +7494,10 @@ class Condition extends DataClass implements Insertable<Condition> {
       name: data.name.present ? data.name.value : this.name,
       code: data.code.present ? data.code.value : this.code,
       onsetDate: data.onsetDate.present ? data.onsetDate.value : this.onsetDate,
+      status: data.status.present ? data.status.value : this.status,
+      resolvedDate: data.resolvedDate.present
+          ? data.resolvedDate.value
+          : this.resolvedDate,
       note: data.note.present ? data.note.value : this.note,
     );
   }
@@ -7440,6 +7514,8 @@ class Condition extends DataClass implements Insertable<Condition> {
           ..write('name: $name, ')
           ..write('code: $code, ')
           ..write('onsetDate: $onsetDate, ')
+          ..write('status: $status, ')
+          ..write('resolvedDate: $resolvedDate, ')
           ..write('note: $note')
           ..write(')'))
         .toString();
@@ -7456,6 +7532,8 @@ class Condition extends DataClass implements Insertable<Condition> {
     name,
     code,
     onsetDate,
+    status,
+    resolvedDate,
     note,
   );
   @override
@@ -7471,6 +7549,8 @@ class Condition extends DataClass implements Insertable<Condition> {
           other.name == this.name &&
           other.code == this.code &&
           other.onsetDate == this.onsetDate &&
+          other.status == this.status &&
+          other.resolvedDate == this.resolvedDate &&
           other.note == this.note);
 }
 
@@ -7484,6 +7564,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
   final Value<String> name;
   final Value<String?> code;
   final Value<DateTime?> onsetDate;
+  final Value<String> status;
+  final Value<DateTime?> resolvedDate;
   final Value<String?> note;
   final Value<int> rowid;
   const ConditionsCompanion({
@@ -7496,6 +7578,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     this.name = const Value.absent(),
     this.code = const Value.absent(),
     this.onsetDate = const Value.absent(),
+    this.status = const Value.absent(),
+    this.resolvedDate = const Value.absent(),
     this.note = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -7509,6 +7593,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     required String name,
     this.code = const Value.absent(),
     this.onsetDate = const Value.absent(),
+    this.status = const Value.absent(),
+    this.resolvedDate = const Value.absent(),
     this.note = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileId = Value(profileId),
@@ -7523,6 +7609,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     Expression<String>? name,
     Expression<String>? code,
     Expression<DateTime>? onsetDate,
+    Expression<String>? status,
+    Expression<DateTime>? resolvedDate,
     Expression<String>? note,
     Expression<int>? rowid,
   }) {
@@ -7536,6 +7624,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
       if (name != null) 'name': name,
       if (code != null) 'code': code,
       if (onsetDate != null) 'onset_date': onsetDate,
+      if (status != null) 'status': status,
+      if (resolvedDate != null) 'resolved_date': resolvedDate,
       if (note != null) 'note': note,
       if (rowid != null) 'rowid': rowid,
     });
@@ -7551,6 +7641,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     Value<String>? name,
     Value<String?>? code,
     Value<DateTime?>? onsetDate,
+    Value<String>? status,
+    Value<DateTime?>? resolvedDate,
     Value<String?>? note,
     Value<int>? rowid,
   }) {
@@ -7564,6 +7656,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
       name: name ?? this.name,
       code: code ?? this.code,
       onsetDate: onsetDate ?? this.onsetDate,
+      status: status ?? this.status,
+      resolvedDate: resolvedDate ?? this.resolvedDate,
       note: note ?? this.note,
       rowid: rowid ?? this.rowid,
     );
@@ -7599,6 +7693,12 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
     if (onsetDate.present) {
       map['onset_date'] = Variable<DateTime>(onsetDate.value);
     }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (resolvedDate.present) {
+      map['resolved_date'] = Variable<DateTime>(resolvedDate.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
@@ -7620,6 +7720,8 @@ class ConditionsCompanion extends UpdateCompanion<Condition> {
           ..write('name: $name, ')
           ..write('code: $code, ')
           ..write('onsetDate: $onsetDate, ')
+          ..write('status: $status, ')
+          ..write('resolvedDate: $resolvedDate, ')
           ..write('note: $note, ')
           ..write('rowid: $rowid')
           ..write(')'))

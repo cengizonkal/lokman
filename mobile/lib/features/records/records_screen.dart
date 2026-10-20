@@ -35,7 +35,7 @@ class RecordsScreen extends ConsumerWidget {
       ),
       (
         Icons.favorite_outline,
-        'Kronik hastalıklar',
+        'Hastalıklar',
         '${n('conditions')} kayıt',
         'conditions',
       ),

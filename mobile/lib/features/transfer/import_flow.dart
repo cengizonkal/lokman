@@ -13,7 +13,7 @@ const kindLabels = {
   RecordKind.immunization: 'aşı',
   RecordKind.dueVaccine: 'planlanan aşı',
   RecordKind.allergy: 'alerji',
-  RecordKind.condition: 'kronik hastalık',
+  RecordKind.condition: 'hastalık',
   RecordKind.observation: 'ölçüm',
   RecordKind.appointment: 'randevu',
   RecordKind.encounter: 'muayene',

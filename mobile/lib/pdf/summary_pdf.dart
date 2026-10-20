@@ -91,6 +91,13 @@ Future<Uint8List> buildSummaryPdf(
       ? 'Hasta beyanı / Patient reported'
       : (origin ?? '');
 
+  final activeConditions = data.conditions
+      .where((c) => c.status != ConditionStatus.resolved)
+      .toList();
+  final pastConditions = data.conditions
+      .where((c) => c.status == ConditionStatus.resolved)
+      .toList();
+
   final content = <pw.Widget>[
     pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -149,8 +156,8 @@ Future<Uint8List> buildSummaryPdf(
             ],
         ],
       ),
-    heading('Kronik hastalıklar', 'Problem list'),
-    if (data.conditions.isEmpty)
+    heading('Devam eden hastalıklar', 'Problem list'),
+    if (activeConditions.isEmpty)
       empty()
     else
       table(
@@ -161,7 +168,7 @@ Future<Uint8List> buildSummaryPdf(
           'Kaynak / Source',
         ],
         [
-          for (final c in data.conditions)
+          for (final c in activeConditions)
             [
               c.name,
               c.code ?? '',
@@ -170,6 +177,28 @@ Future<Uint8List> buildSummaryPdf(
             ],
         ],
       ),
+    if (pastConditions.isNotEmpty) ...[
+      heading('Geçirilmiş hastalıklar', 'Past illnesses'),
+      table(
+        [
+          'Hastalık / Condition',
+          'Kod / Code',
+          'Başlangıç / Onset',
+          'Bitiş / Resolved',
+          'Kaynak / Source',
+        ],
+        [
+          for (final c in pastConditions)
+            [
+              c.name,
+              c.code ?? '',
+              c.onsetDate == null ? '' : _date.format(c.onsetDate!),
+              c.resolvedDate == null ? '' : _date.format(c.resolvedDate!),
+              src(c.source, c.originName),
+            ],
+        ],
+      ),
+    ],
     heading('İlaçlar', 'Medications'),
     if (data.medications.isEmpty)
       empty()

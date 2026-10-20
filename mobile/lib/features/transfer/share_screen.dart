@@ -212,7 +212,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     ('İlaçlar', [RecordKind.medication]),
     ('Aşılar', [RecordKind.immunization, RecordKind.dueVaccine]),
     ('Alerjiler', [RecordKind.allergy]),
-    ('Kronik hastalıklar', [RecordKind.condition]),
+    ('Hastalıklar', [RecordKind.condition]),
     ('Ölçümler', [RecordKind.observation]),
     ('Randevular', [RecordKind.appointment]),
     ('Muayeneler ve tanılar', [RecordKind.encounter, RecordKind.diagnosis]),
