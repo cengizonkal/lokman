@@ -1,6 +1,8 @@
 # Değişiklikler
 
-## Yayınlanmamış
+## 0.1.2
+
+> **Önemli:** Bu, kalıcı imza anahtarıyla imzalanan ilk sürüm. Telefonunuzda 0.1.0 ya da 0.1.1 kuruluysa bu sürüm onun üstüne kurulamaz. Önce uygulamada **Paylaş → Paylaş / yedekle** ile yedek alın, eski sürümü kaldırın, 0.1.2'yi kurun ve yedeği içe aktarın. Bundan sonraki sürümler güncelleme olarak kurulur.
 
 - **Yeni logo:** mavi çerçeve içinde ters üçgen, mavi-beyaz tonlarda. Uygulama simgesi, bildirim simgesi ve karşılama ekranı yeni logoyu kullanır.
 - **Geçirilmiş hastalıklar:** "Kronik hastalıklar" bölümünün adı "Hastalıklar" oldu. Zatürre, sarılık gibi geçirdiğiniz hastalıkları da başlangıç ve iyileşme tarihiyle ekleyebilirsiniz; liste "Devam eden" ve "Geçirilmiş" olarak ayrılır. Sağlık dosyasında IPS'in geçirilmiş hastalıklar bölümüne, PDF özette ayrı tabloya yazılır.
