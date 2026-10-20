@@ -1,0 +1,22 @@
+Lokman, ailenin kişisel sağlık defteridir. İlaçlarınızı, aşılarınızı, hastalıklarınızı, alerjilerinizi, ölçümlerinizi ve randevularınızı telefonunuzda tutar; klinikten gelen sağlık dosyasını okur ve doktorunuza götürebileceğiniz bir özet üretir.
+
+Hesap yok, sunucu yok, reklam yok, izleme yok. Veriler yalnızca telefonunuzda durur. Uygulama internete tek bir durumda çıkar: klinikte gösterilen QR koduna yazılmış https bağlantısından sağlık dosyanızı indirmek için. Başka hiçbir yere veri gönderilmez.
+
+Neler var:
+
+• Bugün: günün ilaç dozları için büyük "Aldım / Atladım" düğmeleri, yaklaşan aşı ve randevular, son ölçümler.
+• İlaçlar: dört adımda ilaç ekleme (ad, doz, saatler, süre), saatinde bildirim, düzenli kullanım oranı.
+• Kayıtlar: yapılan ve yapılacak aşılar, alerjiler, devam eden ve geçirilmiş hastalıklar, ölçümler (tansiyon, nabız, kan şekeri, kilo, boy, ateş, SpO2) grafikleriyle, randevular, muayeneler ve kendi eklediğiniz doktor ziyaretleri.
+• Aile profilleri: kendiniz, çocuğunuz ya da bakımını üstlendiğiniz kişiler için ayrı defter; üst çubuktan tek dokunuşla geçiş.
+• Hatırlatmalar: ilaç saatleri, aşı gününden önce, randevudan önce. Telefon yeniden başlasa da korunur.
+• Klinikten kayıt alma: QR kod ya da dosya (HL7 FHIR R4 / IPS). Aynı dosya iki kez aktarılırsa kayıtlar çoğalmaz. Klinikten gelen kayıtlar kurum adıyla etiketlenir ve değiştirilemez; kendi girdikleriniz "kendi girdiğim" olarak görünür.
+• Paylaşma ve yedek: tüm ya da seçili kayıtlar standart sağlık dosyası (.json) ve iki dilli (Türkçe/İngilizce) PDF özet olarak paylaşılır. Yedeğiniz bu dosyadır.
+• Hastalık ve tanılar uluslararası ICD-11 koduyla saklanır. Günlük dille yazmanız yeter: "yüksek tansiyon" yazınca Esansiyel Hipertansiyon, "zatürre" yazınca Pnömoni önerilir. Dışa aktarılan dosyada kodun yanında, varsa ICD-10 karşılığı da bulunur.
+
+Lokman'ın ikinci yarısı, özel klinikler için açık kaynak bir hasta takip sistemidir. İki ürün birbirinden bağımsızdır; yalnızca FHIR dosyasıyla konuşurlar. Bu yüzden uygulama, Lokman kullanmayan bir kurumun ürettiği IPS uyumlu dosyayı da okuyabilir.
+
+İzinler: kamera (yalnızca QR okumak için), bildirim ve alarm (hatırlatmalar), internet (yalnızca QR'daki https bağlantısından dosya indirmek için).
+
+Uygulama MIT lisanslıdır. Gömülü hastalık listesi, Dünya Sağlık Örgütü'nün ICD-11 MMS sürümünden üretilmiştir (International Classification of Diseases, Eleventh Revision, WHO 2019/2025, CC BY-ND 3.0 IGO); atıf uygulama içindeki lisans ekranında da yer alır.
+
+Lokman bir tıbbi cihaz değildir; teşhis koymaz ve doktor tavsiyesinin yerine geçmez.

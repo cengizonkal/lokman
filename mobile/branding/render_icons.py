@@ -5,6 +5,7 @@ Tek doğruluk kaynağı bu betikteki geometridir. Çalıştırınca:
   - android/app/src/main/res/drawable/ic_launcher_foreground.xml (uyarlanabilir simge ön planı)
   - android/app/src/main/res/drawable/ic_notification.xml
   - android/app/src/main/res/mipmap-*/ic_launcher.png (Android 7 ve öncesi)
+  - fastlane/metadata/android/en-US/images/{icon.png, featureGraphic.png} (F-Droid)
 dosyalarını yeniden yazar ve lib/widgets/lokman_logo.dart için yol komutlarını yazdırır.
 
 Kullanım (mobile/ klasöründen): python3 branding/render_icons.py
@@ -13,7 +14,7 @@ Kullanım (mobile/ klasöründen): python3 branding/render_icons.py
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 WHITE = "#FFFFFF"
 DEEP_BLUE = "#0D47A1"  # çerçeve
@@ -124,7 +125,7 @@ def hex_rgba(h):
     return tuple(int(h[i : i + 2], 16) for i in (1, 3, 5)) + (255,)
 
 
-def render_png(size, out):
+def logo_image(size):
     ss = 8  # kenar yumuşatma için büyük çizip küçült
     s = size * ss
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
@@ -137,7 +138,34 @@ def render_png(size, out):
     d.polygon(tr(polygon(FRAME[1])), fill=hex_rgba(WHITE))
     d.polygon(tr(polygon(TRIANGLE[0])), fill=hex_rgba(BLUE))
     d.polygon(tr(polygon(TRIANGLE[1])), fill=hex_rgba(WHITE))
-    img.resize((size, size), Image.LANCZOS).save(out)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+def render_png(size, out):
+    logo_image(size).save(out)
+
+
+def render_feature_graphic(root, out, w=1024, h=500):
+    """F-Droid'in uygulama sayfasının üstünde gösterdiği afiş (1024x500)."""
+    img = Image.new("RGB", (w, h), hex_rgba(WHITE)[:3])
+    logo = logo_image(round(h * 0.56))
+    left = round(h * 0.19)
+    img.paste(logo, (left, (h - logo.height) // 2), logo)
+
+    fonts = root / "assets" / "fonts"
+    title = ImageFont.truetype(str(fonts / "DejaVuSans-Bold.ttf"), 104)
+    subtitle = ImageFont.truetype(str(fonts / "DejaVuSans.ttf"), 38)
+    d = ImageDraw.Draw(img)
+    x = left + logo.width + round(h * 0.10)
+    d.text((x, h / 2 - 16), "Lokman", font=title, anchor="ls", fill=hex_rgba(DEEP_BLUE)[:3])
+    d.text(
+        (x + 4, h / 2 + 64),
+        "Ailenin kişisel sağlık defteri",
+        font=subtitle,
+        anchor="ls",
+        fill=(0x55, 0x5F, 0x6B),
+    )
+    img.save(out)
 
 
 def main():
@@ -198,6 +226,13 @@ def main():
 
     for folder, size in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():
         render_png(size, res / f"mipmap-{folder}" / "ic_launcher.png")
+
+    # F-Droid listelemesinin görselleri (bkz. docs/FDROID.md). Ekran görüntüleri
+    # elle çekilir; simge ve afiş buradan üretilir.
+    images = root / "fastlane/metadata/android/en-US/images"
+    images.mkdir(parents=True, exist_ok=True)
+    render_png(512, images / "icon.png")
+    render_feature_graphic(root, images / "featureGraphic.png")
 
     for name, shape in (("frame", FRAME), ("triangle", TRIANGLE)):
         print(f"// {name}")

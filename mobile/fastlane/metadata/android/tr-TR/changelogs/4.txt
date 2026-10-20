@@ -1,0 +1,4 @@
+• Hastalık ve tanılar gömülü ICD-11 listesinde aranıyor (17.231 hastalık, resmî Türkçe adlarıyla). "Yüksek tansiyon" yazınca Esansiyel Hipertansiyon önerilir; listeden seçerseniz kod da kaydedilir.
+• Dışa aktarılan dosyada hastalık ve tanılar ICD-11 kodu, resmî adı ve varsa ICD-10 karşılığıyla yazılıyor.
+• Klinikten gelen tanınmayan kodlar artık kaybolmuyor.
+• Bir kaydı düzenleyip alanı boşaltınca eski değerin kalması hatası düzeltildi.

@@ -1,0 +1,81 @@
+Categories:
+  - Health Manager
+  - Sports & Health
+License: MIT
+AuthorName: Cengiz Onkal
+SourceCode: https://github.com/cengizonkal/lokman
+IssueTracker: https://github.com/cengizonkal/lokman/issues
+Changelog: https://github.com/cengizonkal/lokman/releases
+
+AutoName: Lokman
+
+RepoType: git
+Repo: https://github.com/cengizonkal/lokman.git
+
+Builds:
+  - versionName: 0.1.4
+    versionCode: 1005
+    commit: v0.1.4
+    subdir: mobile
+    output: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+    srclibs:
+      - flutter@3.47.7
+    ndk: r28c
+    prebuild:
+      - echo "flutter.sdk=$$flutter$$" > android/local.properties
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter pub get --enforce-lockfile
+    scandelete:
+      - mobile/.pub-cache
+    build:
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter build apk --release --split-per-abi --target-platform=android-arm
+
+  - versionName: 0.1.4
+    versionCode: 2005
+    commit: v0.1.4
+    subdir: mobile
+    output: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+    srclibs:
+      - flutter@3.47.7
+    ndk: r28c
+    prebuild:
+      - echo "flutter.sdk=$$flutter$$" > android/local.properties
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter pub get --enforce-lockfile
+    scandelete:
+      - mobile/.pub-cache
+    build:
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter build apk --release --split-per-abi --target-platform=android-arm64
+
+  - versionName: 0.1.4
+    versionCode: 4005
+    commit: v0.1.4
+    subdir: mobile
+    output: build/app/outputs/flutter-apk/app-x86_64-release.apk
+    srclibs:
+      - flutter@3.47.7
+    ndk: r28c
+    prebuild:
+      - echo "flutter.sdk=$$flutter$$" > android/local.properties
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter pub get --enforce-lockfile
+    scandelete:
+      - mobile/.pub-cache
+    build:
+      - export PUB_CACHE=$(pwd)/.pub-cache
+      - $$flutter$$/bin/flutter build apk --release --split-per-abi --target-platform=android-x64
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+VercodeOperation:
+  - '%c + 1000'
+  - '%c + 2000'
+  - '%c + 4000'
+UpdateCheckData: mobile/pubspec.yaml|version:\s.+\+(\d+)|.|version:\s(.+)\+
+CurrentVersion: 0.1.4
+CurrentVersionCode: 4005

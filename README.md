@@ -8,7 +8,7 @@
 - **Mobil uygulama**: Flutter (Android), hastanın kişisel sağlık defteri
 - İki ürün birbirinden bağımsızdır; yalnızca **HL7 FHIR R4** dışa/içe aktarımı (QR veya dosya) ile veri alışverişi yaparlar.
 
-Lisans: MIT. Plan: [docs/PLAN.md](docs/PLAN.md), [docs/VERITABANI.md](docs/VERITABANI.md), [docs/fhir-sozlesmesi.md](docs/fhir-sozlesmesi.md).
+Lisans: MIT. Plan: [docs/PLAN.md](docs/PLAN.md), [docs/VERITABANI.md](docs/VERITABANI.md), [docs/fhir-sozlesmesi.md](docs/fhir-sozlesmesi.md), [docs/FDROID.md](docs/FDROID.md).
 
 ## Durum
 

@@ -44,7 +44,8 @@ flutter test test/fhir_import_test.dart                     # one file
 flutter test test/fhir_import_test.dart --plain-name 'ad'   # one test by name
 flutter run
 flutter build apk --release
-python3 branding/render_icons.py                            # regenerate logo SVG + launcher PNGs
+python3 branding/render_icons.py                            # regenerate logo SVG + launcher PNGs + F-Droid images
+python3 fastlane/check_metadata.py                          # F-Droid listing text limits (CI)
 python3 ../terminology/build.py                             # regenerate the terminology assets
 python3 ../terminology/build.py --check                     # are the committed assets current? (CI)
 ```
@@ -118,6 +119,20 @@ Bump `schemaVersion` in `lib/data/db/database.dart`, add the step to `onUpgrade`
 `.github/workflows/mobile-release.yml` publishes a GitHub release whenever `pubspec.yaml`'s version has no matching `v<name>` tag. To release: bump `version` in `pubspec.yaml` (both name and build number, e.g. `0.1.1+2`), add a `## <version>` section to `mobile/CHANGELOG.md` (its body becomes the release notes), push. A version containing `-` is published as a pre-release.
 
 Signing: release APKs are signed from `android/key.properties` (git-ignored locally, generated in CI from the `ANDROID_KEYSTORE_*` secrets). Without the secret the workflow falls back to the debug key and adds a warning to the notes. **The signing key must never change** — Android would otherwise force users to uninstall, wiping all on-device data.
+
+### F-Droid
+
+The app is also published on F-Droid, which builds from source on its own server
+and signs with **its own key** — so the F-Droid APK and the GitHub APK are not
+interchangeable (switching channels means uninstall + FHIR backup). The listing
+texts live in `mobile/fastlane/metadata/android/{tr-TR,en-US}/` and the build
+recipe in `mobile/fdroid/io.github.cengizonkal.lokman.yml`; `docs/FDROID.md` is
+the decision record and the submission procedure. **Every release needs a new
+`changelogs/<versionCode>.txt` in both locales** (≤500 chars) — CI fails
+otherwise — and F-Droid only reads metadata from the commit it builds, so it must
+be in the tagged commit. Screenshots are hand-taken into
+`fastlane/metadata/android/en-US/images/phoneScreenshots/`; the icon and feature
+graphic come from `branding/render_icons.py`.
 
 ## Privacy constraints to respect
 

@@ -252,7 +252,7 @@ lokman/
 ├── backend/          Laravel + Filament (klinik sistemi)
 ├── mobile/           Flutter (hasta uygulaması)
 ├── fhir/examples/    Örnek FHIR/IPS paketleri (iki tarafın sözleşme testleri)
-├── docs/             PLAN.md, VERITABANI.md, fhir-sozlesmesi.md, kurulum.md
+├── docs/             PLAN.md, VERITABANI.md, fhir-sozlesmesi.md, TERMINOLOJI.md, FDROID.md, kurulum.md
 ├── docker-compose.yml
 └── .github/workflows/ CI
 ```
@@ -314,10 +314,13 @@ Her faz sonunda çalışan, test edilmiş bir çıktı olur. F0 bittikten sonra 
 ### F5: Yayın (v0.1)
 - [ ] Kişisel veri metinleri ve ekranları (Türkiye: KVKK, KKTC: kendi yasası; panel + mobil)
 - [ ] APK imzalama ve sürüm yayını (GitHub Actions ile otomatik sürüm yayını hazır; kalıcı imza anahtarı secret olarak eklenmeli, bkz. mobile/README.md)
+- [ ] F-Droid'de yayın: üstveri (`mobile/fastlane/`) ve derleme tarifi
+      (`mobile/fdroid/`) hazır; ekran görüntüleri çekilip `fdroiddata`'ya merge
+      request gönderilecek — bkz. [FDROID.md](FDROID.md)
 - [ ] `docs/kurulum.md`: kurulum, alan adı, yedekleme, güncelleme
 - [ ] Demo verisi
 
-**Bitti sayılır:** temiz bir sunucuda kurulum dokümanıyla kurulur; imzalı APK yayınlanır.
+**Bitti sayılır:** temiz bir sunucuda kurulum dokümanıyla kurulur; imzalı APK yayınlanır ve uygulama F-Droid'de listelenir.
 
 ### Sonra
 - v0.1'den ertelenenler: **yerel ağ QR'ı** (kendinden imzalı sertifika, parmak izi doğrulaması, IP seçimi), **Google Drive yedeği / geri yükleme**

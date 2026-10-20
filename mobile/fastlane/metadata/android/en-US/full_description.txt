@@ -1,0 +1,22 @@
+Lokman is your family's personal health record. It keeps your medicines, vaccinations, conditions, allergies, measurements and appointments on your phone, reads the health file your clinic gives you, and produces a printable summary you can take to your doctor.
+
+No account, no server, no ads, no tracking. Your data stays on your phone. The app reaches the internet in exactly one case: to download your own health file from the https link encoded in a QR code shown at the clinic. Nothing is ever sent anywhere else.
+
+What's inside:
+
+• Today: large "Taken / Skipped" buttons for today's medicine doses, upcoming vaccinations and appointments, latest measurements.
+• Medicines: add a medicine in four steps (name, dose, times, duration), get a notification on time, see your adherence rate.
+• Records: vaccinations given and due, allergies, active and past conditions, measurements (blood pressure, pulse, blood sugar, weight, height, temperature, SpO2) with charts, appointments, clinic encounters and doctor visits you add yourself.
+• Family profiles: a separate record for yourself, your child or someone you care for; switch with one tap from the top bar.
+• Reminders: medicine times, before a vaccination is due, before an appointment. They survive a reboot.
+• Import from a clinic: QR code or file (HL7 FHIR R4 / IPS). Importing the same file twice does not duplicate records. Clinic records are labelled with the institution's name and are read-only; your own entries are marked as self-reported.
+• Share and back up: all or selected records as a standard health file (.json) plus a bilingual (Turkish/English) PDF summary. That file is your backup.
+• Conditions and diagnoses are stored with international ICD-11 codes, searchable in everyday Turkish. Exported files carry the code and, where one exists, the matching ICD-10 code.
+
+The other half of Lokman is an open source patient tracking system for private clinics. The two products are independent and speak only through FHIR files, so the app can also read an IPS-compliant file produced by an institution that does not run Lokman.
+
+Permissions: camera (only to scan QR codes), notifications and alarms (reminders), internet (only to download a file from the https link in a QR code).
+
+The app is MIT licensed. The bundled disease list is built from the World Health Organization's ICD-11 MMS release (International Classification of Diseases, Eleventh Revision, WHO 2019/2025, CC BY-ND 3.0 IGO); the attribution is also shown on the app's licence screen.
+
+Lokman is not a medical device. It does not diagnose and does not replace advice from your doctor.

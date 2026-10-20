@@ -65,6 +65,9 @@ jobs:
       - name: Statik analiz
         run: flutter analyze
 
+      - name: F-Droid üstverisi
+        run: python3 fastlane/check_metadata.py
+
       - name: Testler
         run: flutter test
 

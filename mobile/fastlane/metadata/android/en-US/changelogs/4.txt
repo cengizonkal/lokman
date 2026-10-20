@@ -1,0 +1,4 @@
+• Conditions and diagnoses are now searched in the bundled ICD-11 list (17,231 categories with official Turkish titles). Typing everyday words suggests the official condition; picking one stores its code too.
+• Exported health files carry the ICD-11 code, the official title and, where one exists, the matching ICD-10 code.
+• Unrecognised codes coming from a clinic are no longer lost and round-trip unchanged.
+• Fixed a bug where clearing a field while editing a record kept the old value.

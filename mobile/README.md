@@ -86,3 +86,19 @@ storePassword=...
 keyAlias=lokman
 keyPassword=...
 ```
+
+### F-Droid
+
+Uygulama F-Droid'de de yayınlanır; F-Droid kaynaktan kendi derler ve **kendi
+anahtarıyla** imzalar, yani F-Droid'deki APK ile buradaki APK birbirinin yerine
+kurulamaz. Kararın gerekçesi, derleme tarifi ve gönderim adımları:
+[docs/FDROID.md](../docs/FDROID.md).
+
+Her sürümde yapılacak tek iş, yeni derleme numarası için sürüm notunu eklemek:
+
+```
+fastlane/metadata/android/tr-TR/changelogs/<derleme numarası>.txt   (≤ 500 karakter)
+fastlane/metadata/android/en-US/changelogs/<derleme numarası>.txt
+```
+
+`python3 fastlane/check_metadata.py` sınırları denetler; CI de çalıştırır.
