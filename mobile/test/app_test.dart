@@ -220,6 +220,99 @@ void main() {
     await tearDownApp(tester, db);
   });
 
+  testWidgets(
+    'kullanıcı doktor ziyareti ekler, ziyarette yazılan ilaç bağlanır',
+    (tester) async {
+      final db = memoryDb();
+      await tester.runAsync(
+        () =>
+            Repository(db)
+                .addProfile(ProfilesCompanion.insert(firstName: 'Ali')),
+      );
+      await pumpApp(tester, db, onboarded: true);
+
+      await tester.tap(find.text('Kayıtlar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Muayeneler'));
+      await tester.pumpAndSettle();
+      expect(find.text('Muayene kaydı yok'), findsOneWidget);
+      await tester.tap(find.text('Ziyaret ekle'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Doktor ziyareti ekle'), findsOneWidget);
+      expect(find.text('Kontrol randevusu (varsa)'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Hastane / klinik'),
+        'Şehir Hastanesi',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Neden gittiniz?'),
+        'Boğaz ağrısı',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Doktorun söylediği tanı'),
+        'Bademcik iltihabı',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Kaydet'));
+      await tester.pumpAndSettle();
+
+      // Kaydedince ilaç sorulur; ilaç sihirbazı bu ziyarete bağlı açılır.
+      expect(find.text('Bu ziyarette ilaç yazıldı mı?'), findsOneWidget);
+      await tester.tap(find.text('İlaç ekle'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Amoksisilin');
+      await tester.pump();
+      await tester.tap(find.text('Devam'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('1 tablet').first);
+      await tester.tap(find.text('Devam'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Devam'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kaydet'));
+      await tester.pumpAndSettle();
+
+      final encounter = (await tester.runAsync(
+        db.select(db.encounters).getSingle,
+      ))!;
+      expect(encounter.source, RecordSource.self);
+      expect(encounter.location, 'Şehir Hastanesi');
+      expect(encounter.complaint, 'Boğaz ağrısı');
+      final dx = (await tester.runAsync(db.select(db.diagnoses).getSingle))!;
+      expect(dx.name, 'Bademcik iltihabı');
+      expect(dx.encounterId, encounter.id);
+      final med = (await tester.runAsync(db.select(db.medications).getSingle))!;
+      expect(med.name, 'Amoksisilin');
+      expect(med.encounterId, encounter.id);
+
+      // "İlaç kaydedildi" bildirimi kapansın (alt sayfadaki düğmeleri örter).
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Şehir Hastanesi'), findsOneWidget);
+      await tester.tap(find.textContaining('Şehir Hastanesi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Yazılan ilaçlar'), findsOneWidget);
+      expect(find.text('Amoksisilin'), findsOneWidget);
+
+      // Düzenleme: tanı silinince bağlı tanı kaydı da silinir.
+      await tester.ensureVisible(find.text('Düzenle'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Düzenle'));
+      await tester.pumpAndSettle();
+      expect(find.text('Kontrol randevusu (varsa)'), findsNothing);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Doktorun söylediği tanı'),
+        '',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Kaydet'));
+      await tester.pumpAndSettle();
+      expect(await tester.runAsync(db.select(db.diagnoses).get), isEmpty);
+      await tearDownApp(tester, db);
+    },
+  );
+
   testWidgets('klinikten aktarılan kayıtlar tüm ekranlarda görünür', (
     tester,
   ) async {

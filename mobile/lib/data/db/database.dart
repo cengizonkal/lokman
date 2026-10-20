@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'lokman'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -41,6 +41,12 @@ class AppDatabase extends _$AppDatabase {
         // Geçirilmiş hastalıklar: mevcut kayıtlar "devam ediyor" kalır.
         await m.addColumn(conditions, conditions.status);
         await m.addColumn(conditions, conditions.resolvedDate);
+      }
+      if (from < 3) {
+        // Kullanıcının girdiği doktor ziyaretleri ve ziyaret–ilaç bağı.
+        await m.addColumn(encounters, encounters.location);
+        await m.addColumn(encounters, encounters.note);
+        await m.addColumn(medications, medications.encounterId);
       }
     },
     beforeOpen: (details) async {

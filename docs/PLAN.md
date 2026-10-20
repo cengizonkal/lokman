@@ -162,7 +162,7 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 |---|---|
 | Profiller | Aile üyeleri, profil ekleme (klinik dosyası olmadan da), profilin bağlı olduğu klinikler |
 | Bugün | Günün ilaç dozları (aldım / atladım), yaklaşan aşı ve randevular, son ölçümler |
-| Muayeneler | Klinik/kurum, tarih, doktor, şikayet, bulgular, öneriler, teşhisler, reçeteler |
+| Muayeneler | Klinikten gelen muayeneler ve kullanıcının kendi eklediği doktor ziyaretleri (tarih, hastane, doktor/bölüm, neden gidildi, tanı, öneriler, not). Ziyaretten ilaç eklenir ve ziyarete bağlanır; kontrol tarihi girilirse randevu ve hatırlatma oluşur. Kullanıcının ziyaretleri dışa aktarımda "hasta beyanı" olarak işaretlenir |
 | İlaçlarım | Aktif ilaçlar, kullanım saatleri, bitiş tarihi, uyum oranı |
 | Aşılar | Yapılan aşılar, klinikten gelen planlanan aşılar, kendi girdikleri ("doğrulanmadı") |
 | Alerjiler ve hastalıklar | Klinikten gelen ve kendi girdiği alerjiler, devam eden ve geçirilmiş hastalıklar |

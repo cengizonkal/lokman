@@ -29,6 +29,10 @@ void main() {
           db.execute('DELETE FROM conditions');
           db.execute('ALTER TABLE conditions DROP COLUMN status');
           db.execute('ALTER TABLE conditions DROP COLUMN resolved_date');
+          // Sürüm 3'te eklenen kolonlar da sürüm 1'de yoktu.
+          db.execute('ALTER TABLE encounters DROP COLUMN location');
+          db.execute('ALTER TABLE encounters DROP COLUMN note');
+          db.execute('ALTER TABLE medications DROP COLUMN encounter_id');
           db.execute(
             'INSERT INTO conditions (id, profile_id, source, created_at, name) '
             "VALUES ('c1', '$profileId', 'self', 0, 'Astım')",
@@ -36,7 +40,7 @@ void main() {
           db.userVersion = 1;
         },
       );
-      await raw.ensureOpen(_NoMigration());
+      await raw.ensureOpen(_NoMigration(1));
       await raw.close();
 
       final db = AppDatabase(NativeDatabase(file));
@@ -59,11 +63,58 @@ void main() {
       expect(await db.select(db.conditions).get(), hasLength(2));
     },
   );
+
+  test('sürüm 2 veritabanı doktor ziyareti alanlarıyla yükseltilir', () async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    final dir = await Directory.systemTemp.createTemp('lokman_migration');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}/lokman.sqlite');
+
+    final v2 = AppDatabase(NativeDatabase(file));
+    final profileId = newId();
+    await v2
+        .into(v2.profiles)
+        .insert(
+          ProfilesCompanion.insert(id: Value(profileId), firstName: 'Ali'),
+        );
+    await v2.close();
+    final raw = NativeDatabase(
+      file,
+      setup: (db) {
+        db.execute('ALTER TABLE encounters DROP COLUMN location');
+        db.execute('ALTER TABLE encounters DROP COLUMN note');
+        db.execute('ALTER TABLE medications DROP COLUMN encounter_id');
+        db.execute(
+          'INSERT INTO encounters (id, profile_id, source, created_at, date) '
+          "VALUES ('e1', '$profileId', 'clinic', 0, 0)",
+        );
+        db.execute(
+          'INSERT INTO medications '
+          '(id, profile_id, source, created_at, name, start_date) '
+          "VALUES ('m1', '$profileId', 'self', 0, 'Parol', 0)",
+        );
+        db.userVersion = 2;
+      },
+    );
+    await raw.ensureOpen(_NoMigration(2));
+    await raw.close();
+
+    final db = AppDatabase(NativeDatabase(file));
+    addTearDown(db.close);
+    final encounter = await db.select(db.encounters).getSingle();
+    expect(encounter.id, 'e1');
+    expect(encounter.location, isNull);
+    expect(encounter.note, isNull);
+    final medication = await db.select(db.medications).getSingle();
+    expect(medication.encounterId, isNull);
+  });
 }
 
 class _NoMigration extends QueryExecutorUser {
+  _NoMigration(this.schemaVersion);
+
   @override
-  int get schemaVersion => 1;
+  final int schemaVersion;
 
   @override
   Future<void> beforeOpen(

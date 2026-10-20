@@ -582,9 +582,9 @@ Uygulama ilk açılışta kalıcı bir **uygulama kurulum kimliği** üretir. He
 |---|---|
 | `profiles` | Aile üyeleri: id (uuid), ad, soyad, doğum tarihi, cinsiyet, kan grubu, renk/avatar. Ebeveyn çocuk profilini klinik dosyası olmadan açabilir |
 | `profile_links` | Profil ↔ klinik eşlemesi: `installation_id`, klinikteki hasta UUID'si, klinik adı. Bir profil birden çok kliniğe bağlanabilir |
-| `encounters` | Muayene: klinik, tarih, doktor, şikayet, bulgular, plan |
+| `encounters` | Muayene: klinikten gelenler ve kullanıcının kendi eklediği doktor ziyaretleri. Tarih, hastane/klinik (`location`), doktor, şikayet, bulgular, öneriler, kullanıcının notu (`note`) |
 | `diagnoses` | Teşhis (ICD-11 kodu ya da dosyadan gelen başka kod, açıklama, ön/kesin) |
-| `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre |
+| `prescriptions`, `medications` | Reçete ve kalemleri: doz, saatler, başlangıç, süre. `encounter_id`: ilacın yazıldığı muayene/ziyaret |
 | `dose_events` | Doz kaydı: `medication_id`, planlanan zaman, `taken` / `skipped`, işaretlenme zamanı. **Yalnızca mobilde kalır, hiçbir dışa aktarıma girmez** |
 | `immunizations` | Aşılar. `source`: klinikten gelen (`clinic`) ya da hastanın girdiği (`self`) |
 | `immunization_due` | Planlanan aşılar: klinikten gelen `ImmunizationRecommendation` kayıtları |

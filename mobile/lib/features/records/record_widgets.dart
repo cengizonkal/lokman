@@ -230,12 +230,16 @@ class RecordFormScaffold extends StatelessWidget {
     required this.children,
     required this.canSave,
     required this.onSave,
+    this.result,
   });
 
   final String title;
   final List<Widget> children;
   final bool canSave;
   final Future<void> Function() onSave;
+
+  /// Kaydettikten sonra formu açana döndürülecek değer.
+  final Object? Function()? result;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -246,7 +250,7 @@ class RecordFormScaffold extends StatelessWidget {
       onPressed: canSave
           ? () async {
               await onSave();
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context, result?.call());
             }
           : null,
     ),

@@ -62,11 +62,11 @@ Etiket yoksa kayıt, paketi üreten kurumun (Organization) kaydı sayılır. Kli
 
 | FHIR | Mobil tablo | Okunan / yazılan alanlar |
 |---|---|---|
-| `Encounter` | `encounters` | `period.start`, `participant[0].individual.display`, `reasonCode[].text`, eklentiler: `encounter-findings`, `encounter-plan` (`valueString`) |
+| `Encounter` | `encounters` | `period.start`, `participant[0].individual.display`, `serviceProvider.display` (gidilen hastane/klinik; okurken `location[0].location.display` de kabul edilir), `reasonCode[].text`, eklentiler: `encounter-findings`, `encounter-plan`, `encounter-note` (hastanın kendi notu) (`valueString`). Kullanıcının girdiği doktor ziyaretleri `meta.tag` = `patient-reported` taşır |
 | `Condition` + `encounter-diagnosis` | `diagnoses` | `code` (ICD-11: `http://id.who.int/icd/release/11/mms`; eşleme lisansı uygunsa ek ICD-10 coding), `verificationStatus` (`provisional` / `confirmed`), `encounter`, `recordedDate` |
 | `Condition` (diğer) | `conditions` | `code`, `onsetDateTime`, `abatementDateTime`, `clinicalStatus`, `note` |
 | `AllergyIntolerance` | `allergies` | `code` (ATC ya da metin), `reaction[].manifestation[].text`, `criticality` |
-| `MedicationRequest` | `medications` | `medicationCodeableConcept` (ATC), `dosageInstruction[0]`: `text`, `doseAndRate[0].doseQuantity`, `timing.repeat.timeOfDay`, `boundsPeriod` / `boundsDuration`; `authoredOn`, `status`, `groupIdentifier` |
+| `MedicationRequest` | `medications` | `medicationCodeableConcept` (ATC), `dosageInstruction[0]`: `text`, `doseAndRate[0].doseQuantity`, `timing.repeat.timeOfDay`, `boundsPeriod` / `boundsDuration`; `authoredOn`, `status`, `groupIdentifier`, `encounter` (ilacın yazıldığı muayene; yalnızca muayene aynı paketteyse yazılır) |
 | `Immunization` | `immunizations` | `vaccineCode`, `occurrenceDateTime`, `protocolApplied[0].doseNumberPositiveInt`, `lotNumber`, `primarySource` |
 | `ImmunizationRecommendation` | `immunization_due` | her `recommendation`: `vaccineCode[0]`, `dateCriterion[0].value` (`30980-7`), `doseNumberPositiveInt`, `forecastStatus` |
 | `Observation` | `observations` | LOINC `code`, `valueQuantity` (UCUM), tansiyon `component` (`8480-6` / `8462-4`), `effectiveDateTime` |

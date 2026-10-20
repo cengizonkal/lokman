@@ -30,6 +30,7 @@ abstract final class LokmanFhir {
       'https://github.com/cengizonkal/lokman/fhir/StructureDefinition/';
   static const encounterFindings = '${extensionBase}encounter-findings';
   static const encounterPlan = '${extensionBase}encounter-plan';
+  static const encounterNote = '${extensionBase}encounter-note';
 
   /// Kaydın kaynağını taşıyan `meta.tag` sistemi.
   static const recordSourceTag = 'urn:lokman:record-source';

@@ -8,13 +8,17 @@ import '../../domain/catalog.dart';
 import '../../domain/dose_schedule.dart';
 import '../../widgets/common.dart';
 
-Future<void> openMedicationWizard(BuildContext context, {Medication? edit}) =>
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => MedicationWizard(edit: edit),
-      ),
-    );
+/// [encounterId] verilirse yeni ilaç o doktor ziyaretine bağlanır.
+Future<void> openMedicationWizard(
+  BuildContext context, {
+  Medication? edit,
+  String? encounterId,
+}) => Navigator.of(context).push(
+  MaterialPageRoute(
+    fullscreenDialog: true,
+    builder: (_) => MedicationWizard(edit: edit, encounterId: encounterId),
+  ),
+);
 
 const presetTimes = [
   ('Sabah', DoseTime(8, 0)),
@@ -27,9 +31,12 @@ const durationPresets = [3, 5, 7, 10, 14, 30];
 
 /// Dört adımda ilaç ekleme: ad → doz → saatler → süre.
 class MedicationWizard extends ConsumerStatefulWidget {
-  const MedicationWizard({super.key, this.edit});
+  const MedicationWizard({super.key, this.edit, this.encounterId});
 
   final Medication? edit;
+
+  /// Yeni ilacın bağlanacağı doktor ziyareti.
+  final String? encounterId;
 
   @override
   ConsumerState<MedicationWizard> createState() => _MedicationWizardState();
@@ -95,6 +102,7 @@ class _MedicationWizardState extends ConsumerState<MedicationWizard> {
           startDate: _start,
           durationDays: Value(_durationDays),
           note: Value(note.isEmpty ? null : note),
+          encounterId: Value(widget.encounterId),
         ),
       );
     } else {

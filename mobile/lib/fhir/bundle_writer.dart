@@ -138,10 +138,12 @@ class _BundleWriter {
       for (final c in data.conditions)
         if (c.status == ConditionStatus.resolved) _condition(c),
     ];
-    final meds = data.medications.map(_medication).toList();
+    final encounterIds = {for (final e in data.encounters) e.id};
+    final meds = data.medications
+        .map((m) => _medication(m, encounterIds))
+        .toList();
     final immunizations = data.immunizations.map(_immunization).toList();
     final observations = data.observations.map(_observation).toList();
-    final encounterIds = {for (final e in data.encounters) e.id};
     final encounters = [
       ...data.encounters.map(_encounter),
       ...data.diagnoses.map((d) => _diagnosis(d, encounterIds)),
@@ -387,7 +389,7 @@ class _BundleWriter {
         if (d.date != null) 'recordedDate': fhirDate(d.date!),
       }, d.name);
 
-  _Item _medication(Medication m) {
+  _Item _medication(Medication m, Set<String> encounterIds) {
     final times = DoseTime.parseList(m.timesOfDay);
     final last = lastDay(m);
     final status = m.stoppedAt != null
@@ -419,6 +421,8 @@ class _BundleWriter {
           m.name,
         ),
         'subject': _patientRef,
+        if (m.encounterId != null && encounterIds.contains(m.encounterId))
+          'encounter': {'reference': 'urn:uuid:${m.encounterId}'},
         'authoredOn': fhirDate(m.startDate),
         'dosageInstruction': [
           {
@@ -601,6 +605,8 @@ class _BundleWriter {
           {'url': LokmanFhir.encounterFindings, 'valueString': e.findings},
         if (e.plan != null)
           {'url': LokmanFhir.encounterPlan, 'valueString': e.plan},
+        if (e.note != null)
+          {'url': LokmanFhir.encounterNote, 'valueString': e.note},
       ],
       'status': 'finished',
       'class': {
@@ -615,6 +621,7 @@ class _BundleWriter {
           },
         ],
       'period': {'start': fhirDateTime(e.date)},
+      if (e.location != null) 'serviceProvider': {'display': e.location},
       if (e.complaint != null)
         'reasonCode': [
           {'text': e.complaint},
@@ -622,7 +629,7 @@ class _BundleWriter {
     }..removeWhere((k, v) => k == 'extension' && (v as List).isEmpty),
     [
       fhirDate(e.date),
-      e.originName,
+      e.location ?? e.originName,
       e.practitioner,
       e.complaint,
     ].nonNulls.join(' — '),

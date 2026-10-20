@@ -286,6 +286,77 @@ void main() {
     expect((await importWith({})).status, ConditionStatus.active);
   });
 
+  test(
+    'kullanıcının doktor ziyareti hastane, not ve ilaç bağıyla aktarılır',
+    () async {
+      final profileId = await repo.addProfile(
+        ProfilesCompanion.insert(firstName: 'Ali'),
+      );
+      final encounterId = newId();
+      await repo.save(
+        repo.db.encounters,
+        EncountersCompanion.insert(
+          id: Value(encounterId),
+          profileId: profileId,
+          date: DateTime(2026, 10, 14),
+          location: const Value('Şehir Hastanesi'),
+          practitioner: const Value('Dr. Elif Kaya, KBB'),
+          complaint: const Value('Boğaz ağrısı'),
+          note: const Value('Sabah aç gitmem gerekti'),
+        ),
+      );
+      await repo.save(
+        repo.db.diagnoses,
+        DiagnosesCompanion.insert(
+          profileId: profileId,
+          encounterId: Value(encounterId),
+          name: 'Bademcik iltihabı',
+        ),
+      );
+      await repo.save(
+        repo.db.medications,
+        MedicationsCompanion.insert(
+          profileId: profileId,
+          name: 'Amoksisilin',
+          startDate: DateTime(2026, 10, 14),
+          encounterId: Value(encounterId),
+        ),
+      );
+
+      final bundle = buildBundle(
+        await ExportData.load(repo.db, profileId),
+        appId: await repo.appId(),
+      );
+      final resources = [
+        for (final e in bundle['entry'] as List) e['resource'] as Map,
+      ];
+      final enc = resources.firstWhere((r) => r['resourceType'] == 'Encounter');
+      expect(enc['serviceProvider'], {'display': 'Şehir Hastanesi'});
+      expect(enc['meta']['tag'][0]['code'], 'patient-reported');
+      final medRes = resources.firstWhere(
+        (r) => r['resourceType'] == 'MedicationRequest',
+      );
+      expect(medRes['encounter'], {'reference': 'urn:uuid:$encounterId'});
+
+      // Başka bir telefona aktarım: ziyaret, tanı ve ilaç bağı korunur.
+      final other = memoryRepo();
+      addTearDown(other.db.close);
+      final otherImporter = Importer(other);
+      final parsed = await otherImporter.parse(encodeBundle(bundle));
+      final pid = await otherImporter.createProfileFrom(parsed.patient);
+      await otherImporter.apply(parsed, pid);
+      final e2 = (await other.watchEncounters(pid).first).single;
+      expect(e2.location, 'Şehir Hastanesi');
+      expect(e2.practitioner, 'Dr. Elif Kaya, KBB');
+      expect(e2.note, 'Sabah aç gitmem gerekti');
+      expect(e2.source, RecordSource.self);
+      final dx2 = (await other.watchDiagnoses(pid).first).single;
+      expect(dx2.encounterId, e2.id);
+      final med2 = (await other.watchMedications(pid).first).single;
+      expect(med2.encounterId, e2.id);
+    },
+  );
+
   test('geçersiz dosya anlaşılır hata verir', () async {
     expect(
       () => importer.parse('{"resourceType":"Patient"}'),

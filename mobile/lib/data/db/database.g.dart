@@ -978,6 +978,17 @@ class $EncountersTable extends Encounters
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _locationMeta = const VerificationMeta(
+    'location',
+  );
+  @override
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+    'location',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _complaintMeta = const VerificationMeta(
     'complaint',
   );
@@ -1009,6 +1020,15 @@ class $EncountersTable extends Encounters
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1019,9 +1039,11 @@ class $EncountersTable extends Encounters
     createdAt,
     date,
     practitioner,
+    location,
     complaint,
     findings,
     plan,
+    note,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1087,6 +1109,12 @@ class $EncountersTable extends Encounters
         ),
       );
     }
+    if (data.containsKey('location')) {
+      context.handle(
+        _locationMeta,
+        location.isAcceptableOrUnknown(data['location']!, _locationMeta),
+      );
+    }
     if (data.containsKey('complaint')) {
       context.handle(
         _complaintMeta,
@@ -1103,6 +1131,12 @@ class $EncountersTable extends Encounters
       context.handle(
         _planMeta,
         plan.isAcceptableOrUnknown(data['plan']!, _planMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
     return context;
@@ -1146,6 +1180,10 @@ class $EncountersTable extends Encounters
         DriftSqlType.string,
         data['${effectivePrefix}practitioner'],
       ),
+      location: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location'],
+      ),
       complaint: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}complaint'],
@@ -1157,6 +1195,10 @@ class $EncountersTable extends Encounters
       plan: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}plan'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
       ),
     );
   }
@@ -1181,11 +1223,17 @@ class Encounter extends DataClass implements Insertable<Encounter> {
   final DateTime createdAt;
   final DateTime date;
   final String? practitioner;
+
+  /// Gidilen hastane / klinik (FHIR `Encounter.serviceProvider`).
+  final String? location;
   final String? complaint;
   final String? findings;
 
   /// Hekimin hastaya önerileri.
   final String? plan;
+
+  /// Kullanıcının kendi notu.
+  final String? note;
   const Encounter({
     required this.id,
     required this.profileId,
@@ -1195,9 +1243,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
     required this.createdAt,
     required this.date,
     this.practitioner,
+    this.location,
     this.complaint,
     this.findings,
     this.plan,
+    this.note,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1216,6 +1266,9 @@ class Encounter extends DataClass implements Insertable<Encounter> {
     if (!nullToAbsent || practitioner != null) {
       map['practitioner'] = Variable<String>(practitioner);
     }
+    if (!nullToAbsent || location != null) {
+      map['location'] = Variable<String>(location);
+    }
     if (!nullToAbsent || complaint != null) {
       map['complaint'] = Variable<String>(complaint);
     }
@@ -1224,6 +1277,9 @@ class Encounter extends DataClass implements Insertable<Encounter> {
     }
     if (!nullToAbsent || plan != null) {
       map['plan'] = Variable<String>(plan);
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
     }
     return map;
   }
@@ -1244,6 +1300,9 @@ class Encounter extends DataClass implements Insertable<Encounter> {
       practitioner: practitioner == null && nullToAbsent
           ? const Value.absent()
           : Value(practitioner),
+      location: location == null && nullToAbsent
+          ? const Value.absent()
+          : Value(location),
       complaint: complaint == null && nullToAbsent
           ? const Value.absent()
           : Value(complaint),
@@ -1251,6 +1310,7 @@ class Encounter extends DataClass implements Insertable<Encounter> {
           ? const Value.absent()
           : Value(findings),
       plan: plan == null && nullToAbsent ? const Value.absent() : Value(plan),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
     );
   }
 
@@ -1268,9 +1328,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       date: serializer.fromJson<DateTime>(json['date']),
       practitioner: serializer.fromJson<String?>(json['practitioner']),
+      location: serializer.fromJson<String?>(json['location']),
       complaint: serializer.fromJson<String?>(json['complaint']),
       findings: serializer.fromJson<String?>(json['findings']),
       plan: serializer.fromJson<String?>(json['plan']),
+      note: serializer.fromJson<String?>(json['note']),
     );
   }
   @override
@@ -1285,9 +1347,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'date': serializer.toJson<DateTime>(date),
       'practitioner': serializer.toJson<String?>(practitioner),
+      'location': serializer.toJson<String?>(location),
       'complaint': serializer.toJson<String?>(complaint),
       'findings': serializer.toJson<String?>(findings),
       'plan': serializer.toJson<String?>(plan),
+      'note': serializer.toJson<String?>(note),
     };
   }
 
@@ -1300,9 +1364,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
     DateTime? createdAt,
     DateTime? date,
     Value<String?> practitioner = const Value.absent(),
+    Value<String?> location = const Value.absent(),
     Value<String?> complaint = const Value.absent(),
     Value<String?> findings = const Value.absent(),
     Value<String?> plan = const Value.absent(),
+    Value<String?> note = const Value.absent(),
   }) => Encounter(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -1312,9 +1378,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
     createdAt: createdAt ?? this.createdAt,
     date: date ?? this.date,
     practitioner: practitioner.present ? practitioner.value : this.practitioner,
+    location: location.present ? location.value : this.location,
     complaint: complaint.present ? complaint.value : this.complaint,
     findings: findings.present ? findings.value : this.findings,
     plan: plan.present ? plan.value : this.plan,
+    note: note.present ? note.value : this.note,
   );
   Encounter copyWithCompanion(EncountersCompanion data) {
     return Encounter(
@@ -1330,9 +1398,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
       practitioner: data.practitioner.present
           ? data.practitioner.value
           : this.practitioner,
+      location: data.location.present ? data.location.value : this.location,
       complaint: data.complaint.present ? data.complaint.value : this.complaint,
       findings: data.findings.present ? data.findings.value : this.findings,
       plan: data.plan.present ? data.plan.value : this.plan,
+      note: data.note.present ? data.note.value : this.note,
     );
   }
 
@@ -1347,9 +1417,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
           ..write('createdAt: $createdAt, ')
           ..write('date: $date, ')
           ..write('practitioner: $practitioner, ')
+          ..write('location: $location, ')
           ..write('complaint: $complaint, ')
           ..write('findings: $findings, ')
-          ..write('plan: $plan')
+          ..write('plan: $plan, ')
+          ..write('note: $note')
           ..write(')'))
         .toString();
   }
@@ -1364,9 +1436,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
     createdAt,
     date,
     practitioner,
+    location,
     complaint,
     findings,
     plan,
+    note,
   );
   @override
   bool operator ==(Object other) =>
@@ -1380,9 +1454,11 @@ class Encounter extends DataClass implements Insertable<Encounter> {
           other.createdAt == this.createdAt &&
           other.date == this.date &&
           other.practitioner == this.practitioner &&
+          other.location == this.location &&
           other.complaint == this.complaint &&
           other.findings == this.findings &&
-          other.plan == this.plan);
+          other.plan == this.plan &&
+          other.note == this.note);
 }
 
 class EncountersCompanion extends UpdateCompanion<Encounter> {
@@ -1394,9 +1470,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
   final Value<DateTime> createdAt;
   final Value<DateTime> date;
   final Value<String?> practitioner;
+  final Value<String?> location;
   final Value<String?> complaint;
   final Value<String?> findings;
   final Value<String?> plan;
+  final Value<String?> note;
   final Value<int> rowid;
   const EncountersCompanion({
     this.id = const Value.absent(),
@@ -1407,9 +1485,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
     this.createdAt = const Value.absent(),
     this.date = const Value.absent(),
     this.practitioner = const Value.absent(),
+    this.location = const Value.absent(),
     this.complaint = const Value.absent(),
     this.findings = const Value.absent(),
     this.plan = const Value.absent(),
+    this.note = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EncountersCompanion.insert({
@@ -1421,9 +1501,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
     this.createdAt = const Value.absent(),
     required DateTime date,
     this.practitioner = const Value.absent(),
+    this.location = const Value.absent(),
     this.complaint = const Value.absent(),
     this.findings = const Value.absent(),
     this.plan = const Value.absent(),
+    this.note = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileId = Value(profileId),
        date = Value(date);
@@ -1436,9 +1518,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? date,
     Expression<String>? practitioner,
+    Expression<String>? location,
     Expression<String>? complaint,
     Expression<String>? findings,
     Expression<String>? plan,
+    Expression<String>? note,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1450,9 +1534,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
       if (createdAt != null) 'created_at': createdAt,
       if (date != null) 'date': date,
       if (practitioner != null) 'practitioner': practitioner,
+      if (location != null) 'location': location,
       if (complaint != null) 'complaint': complaint,
       if (findings != null) 'findings': findings,
       if (plan != null) 'plan': plan,
+      if (note != null) 'note': note,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1466,9 +1552,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
     Value<DateTime>? createdAt,
     Value<DateTime>? date,
     Value<String?>? practitioner,
+    Value<String?>? location,
     Value<String?>? complaint,
     Value<String?>? findings,
     Value<String?>? plan,
+    Value<String?>? note,
     Value<int>? rowid,
   }) {
     return EncountersCompanion(
@@ -1480,9 +1568,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
       createdAt: createdAt ?? this.createdAt,
       date: date ?? this.date,
       practitioner: practitioner ?? this.practitioner,
+      location: location ?? this.location,
       complaint: complaint ?? this.complaint,
       findings: findings ?? this.findings,
       plan: plan ?? this.plan,
+      note: note ?? this.note,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1514,6 +1604,9 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
     if (practitioner.present) {
       map['practitioner'] = Variable<String>(practitioner.value);
     }
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
+    }
     if (complaint.present) {
       map['complaint'] = Variable<String>(complaint.value);
     }
@@ -1522,6 +1615,9 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
     }
     if (plan.present) {
       map['plan'] = Variable<String>(plan.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1540,9 +1636,11 @@ class EncountersCompanion extends UpdateCompanion<Encounter> {
           ..write('createdAt: $createdAt, ')
           ..write('date: $date, ')
           ..write('practitioner: $practitioner, ')
+          ..write('location: $location, ')
           ..write('complaint: $complaint, ')
           ..write('findings: $findings, ')
           ..write('plan: $plan, ')
+          ..write('note: $note, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2372,6 +2470,17 @@ class $MedicationsTable extends Medications
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _encounterIdMeta = const VerificationMeta(
+    'encounterId',
+  );
+  @override
+  late final GeneratedColumn<String> encounterId = GeneratedColumn<String>(
+    'encounter_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _stoppedAtMeta = const VerificationMeta(
     'stoppedAt',
   );
@@ -2399,6 +2508,7 @@ class $MedicationsTable extends Medications
     note,
     atcCode,
     prescriptionRef,
+    encounterId,
     stoppedAt,
   ];
   @override
@@ -2509,6 +2619,15 @@ class $MedicationsTable extends Medications
         ),
       );
     }
+    if (data.containsKey('encounter_id')) {
+      context.handle(
+        _encounterIdMeta,
+        encounterId.isAcceptableOrUnknown(
+          data['encounter_id']!,
+          _encounterIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('stopped_at')) {
       context.handle(
         _stoppedAtMeta,
@@ -2580,6 +2699,10 @@ class $MedicationsTable extends Medications
         DriftSqlType.string,
         data['${effectivePrefix}prescription_ref'],
       ),
+      encounterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}encounter_id'],
+      ),
       stoppedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}stopped_at'],
@@ -2621,6 +2744,9 @@ class Medication extends DataClass implements Insertable<Medication> {
 
   /// Aynı reçetedeki kalemleri gruplar (`MedicationRequest.groupIdentifier`).
   final String? prescriptionRef;
+
+  /// İlacın yazıldığı muayene (`MedicationRequest.encounter`).
+  final String? encounterId;
   final DateTime? stoppedAt;
   const Medication({
     required this.id,
@@ -2637,6 +2763,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     this.note,
     this.atcCode,
     this.prescriptionRef,
+    this.encounterId,
     this.stoppedAt,
   });
   @override
@@ -2667,6 +2794,9 @@ class Medication extends DataClass implements Insertable<Medication> {
     }
     if (!nullToAbsent || prescriptionRef != null) {
       map['prescription_ref'] = Variable<String>(prescriptionRef);
+    }
+    if (!nullToAbsent || encounterId != null) {
+      map['encounter_id'] = Variable<String>(encounterId);
     }
     if (!nullToAbsent || stoppedAt != null) {
       map['stopped_at'] = Variable<DateTime>(stoppedAt);
@@ -2700,6 +2830,9 @@ class Medication extends DataClass implements Insertable<Medication> {
       prescriptionRef: prescriptionRef == null && nullToAbsent
           ? const Value.absent()
           : Value(prescriptionRef),
+      encounterId: encounterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encounterId),
       stoppedAt: stoppedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(stoppedAt),
@@ -2726,6 +2859,7 @@ class Medication extends DataClass implements Insertable<Medication> {
       note: serializer.fromJson<String?>(json['note']),
       atcCode: serializer.fromJson<String?>(json['atcCode']),
       prescriptionRef: serializer.fromJson<String?>(json['prescriptionRef']),
+      encounterId: serializer.fromJson<String?>(json['encounterId']),
       stoppedAt: serializer.fromJson<DateTime?>(json['stoppedAt']),
     );
   }
@@ -2747,6 +2881,7 @@ class Medication extends DataClass implements Insertable<Medication> {
       'note': serializer.toJson<String?>(note),
       'atcCode': serializer.toJson<String?>(atcCode),
       'prescriptionRef': serializer.toJson<String?>(prescriptionRef),
+      'encounterId': serializer.toJson<String?>(encounterId),
       'stoppedAt': serializer.toJson<DateTime?>(stoppedAt),
     };
   }
@@ -2766,6 +2901,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     Value<String?> note = const Value.absent(),
     Value<String?> atcCode = const Value.absent(),
     Value<String?> prescriptionRef = const Value.absent(),
+    Value<String?> encounterId = const Value.absent(),
     Value<DateTime?> stoppedAt = const Value.absent(),
   }) => Medication(
     id: id ?? this.id,
@@ -2784,6 +2920,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     prescriptionRef: prescriptionRef.present
         ? prescriptionRef.value
         : this.prescriptionRef,
+    encounterId: encounterId.present ? encounterId.value : this.encounterId,
     stoppedAt: stoppedAt.present ? stoppedAt.value : this.stoppedAt,
   );
   Medication copyWithCompanion(MedicationsCompanion data) {
@@ -2810,6 +2947,9 @@ class Medication extends DataClass implements Insertable<Medication> {
       prescriptionRef: data.prescriptionRef.present
           ? data.prescriptionRef.value
           : this.prescriptionRef,
+      encounterId: data.encounterId.present
+          ? data.encounterId.value
+          : this.encounterId,
       stoppedAt: data.stoppedAt.present ? data.stoppedAt.value : this.stoppedAt,
     );
   }
@@ -2831,6 +2971,7 @@ class Medication extends DataClass implements Insertable<Medication> {
           ..write('note: $note, ')
           ..write('atcCode: $atcCode, ')
           ..write('prescriptionRef: $prescriptionRef, ')
+          ..write('encounterId: $encounterId, ')
           ..write('stoppedAt: $stoppedAt')
           ..write(')'))
         .toString();
@@ -2852,6 +2993,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     note,
     atcCode,
     prescriptionRef,
+    encounterId,
     stoppedAt,
   );
   @override
@@ -2872,6 +3014,7 @@ class Medication extends DataClass implements Insertable<Medication> {
           other.note == this.note &&
           other.atcCode == this.atcCode &&
           other.prescriptionRef == this.prescriptionRef &&
+          other.encounterId == this.encounterId &&
           other.stoppedAt == this.stoppedAt);
 }
 
@@ -2890,6 +3033,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
   final Value<String?> note;
   final Value<String?> atcCode;
   final Value<String?> prescriptionRef;
+  final Value<String?> encounterId;
   final Value<DateTime?> stoppedAt;
   final Value<int> rowid;
   const MedicationsCompanion({
@@ -2907,6 +3051,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     this.note = const Value.absent(),
     this.atcCode = const Value.absent(),
     this.prescriptionRef = const Value.absent(),
+    this.encounterId = const Value.absent(),
     this.stoppedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2925,6 +3070,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     this.note = const Value.absent(),
     this.atcCode = const Value.absent(),
     this.prescriptionRef = const Value.absent(),
+    this.encounterId = const Value.absent(),
     this.stoppedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileId = Value(profileId),
@@ -2945,6 +3091,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     Expression<String>? note,
     Expression<String>? atcCode,
     Expression<String>? prescriptionRef,
+    Expression<String>? encounterId,
     Expression<DateTime>? stoppedAt,
     Expression<int>? rowid,
   }) {
@@ -2963,6 +3110,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
       if (note != null) 'note': note,
       if (atcCode != null) 'atc_code': atcCode,
       if (prescriptionRef != null) 'prescription_ref': prescriptionRef,
+      if (encounterId != null) 'encounter_id': encounterId,
       if (stoppedAt != null) 'stopped_at': stoppedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2983,6 +3131,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     Value<String?>? note,
     Value<String?>? atcCode,
     Value<String?>? prescriptionRef,
+    Value<String?>? encounterId,
     Value<DateTime?>? stoppedAt,
     Value<int>? rowid,
   }) {
@@ -3001,6 +3150,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
       note: note ?? this.note,
       atcCode: atcCode ?? this.atcCode,
       prescriptionRef: prescriptionRef ?? this.prescriptionRef,
+      encounterId: encounterId ?? this.encounterId,
       stoppedAt: stoppedAt ?? this.stoppedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3051,6 +3201,9 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     if (prescriptionRef.present) {
       map['prescription_ref'] = Variable<String>(prescriptionRef.value);
     }
+    if (encounterId.present) {
+      map['encounter_id'] = Variable<String>(encounterId.value);
+    }
     if (stoppedAt.present) {
       map['stopped_at'] = Variable<DateTime>(stoppedAt.value);
     }
@@ -3077,6 +3230,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
           ..write('note: $note, ')
           ..write('atcCode: $atcCode, ')
           ..write('prescriptionRef: $prescriptionRef, ')
+          ..write('encounterId: $encounterId, ')
           ..write('stoppedAt: $stoppedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))

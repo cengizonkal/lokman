@@ -6,6 +6,8 @@ import '../../app/format.dart';
 import '../../app/providers.dart';
 import '../../data/db/database.dart';
 import '../../domain/catalog.dart';
+import '../../domain/dose_schedule.dart' show dateOnly;
+import '../medications/medication_wizard.dart';
 import '../../widgets/common.dart';
 import 'record_widgets.dart';
 
@@ -556,6 +558,8 @@ class _AppointmentFormState extends ConsumerState<AppointmentForm> {
 
 // ----------------------------------------------------------------- Muayeneler
 
+/// Muayeneler: klinikten gelenler ve kullanıcının kendi eklediği doktor
+/// ziyaretleri.
 class EncountersScreen extends ConsumerWidget {
   const EncountersScreen({super.key});
 
@@ -566,57 +570,352 @@ class EncountersScreen extends ConsumerWidget {
     final items = ref.watch(encountersProvider(profile.id)).value ?? const [];
     final diagnoses =
         ref.watch(diagnosesProvider(profile.id)).value ?? const [];
+    final medications =
+        ref.watch(medicationsProvider(profile.id)).value ?? const [];
     return RecordListPage(
       title: 'Muayeneler',
       isEmpty: items.isEmpty,
       emptyIcon: Icons.medical_information_outlined,
       emptyTitle: 'Muayene kaydı yok',
       emptyMessage:
-          'Doktorunuzun gönderdiği muayene özetleri (şikayet, bulgular, tanı '
-          've öneriler) burada görünür. Klinikten aldığınız QR kodu ya da '
-          'dosyayı “Paylaş” sekmesinden aktarabilirsiniz.',
+          'Gittiğiniz doktor ziyaretlerini ekleyin: nereye, neden gittiniz, '
+          'doktor ne dedi. Klinikten aldığınız QR kodu ya da dosyayı '
+          '“Paylaş” sekmesinden de aktarabilirsiniz.',
+      addLabel: 'Ziyaret ekle',
+      onAdd: () => addVisit(context),
       children: [
         const SizedBox(height: 8),
         for (final e in items)
-          () {
-            final dx = diagnoses.where((d) => d.encounterId == e.id).toList();
-            return RecordCard(
-              title: formatDay(e.date),
-              subtitle: [
-                e.practitioner,
-                e.complaint,
-                if (dx.isNotEmpty) dx.map((d) => d.name).join(', '),
-              ].nonNulls.join(' · '),
-              source: e.source,
-              originName: e.originName,
-              leading: const Icon(Icons.medical_information_outlined),
-              onTap: () => showRecordSheet(
-                context,
-                title: 'Muayene · ${formatDay(e.date)}',
-                source: e.source,
-                originName: e.originName,
-                details: [
-                  InfoRow('Doktor', e.practitioner),
-                  InfoRow('Şikayet', e.complaint),
-                  InfoRow('Bulgular', e.findings),
-                  for (final d in dx)
-                    InfoRow(
-                      d.verification == 'provisional' ? 'Ön tanı' : 'Tanı',
-                      [d.name, if (d.code != null) '(${d.code})'].join(' '),
-                    ),
-                  InfoRow('Doktorun önerileri', e.plan),
-                ],
-                onDelete: () => deleteWithUndo(
-                  context,
-                  ref,
-                  ref.read(databaseProvider).encounters,
-                  e.id,
-                  e,
-                ),
-              ),
-            );
-          }(),
+          _card(
+            context,
+            ref,
+            e,
+            diagnoses.where((d) => d.encounterId == e.id).toList(),
+            medications.where((m) => m.encounterId == e.id).toList(),
+          ),
       ],
     );
   }
+
+  Widget _card(
+    BuildContext context,
+    WidgetRef ref,
+    Encounter e,
+    List<Diagnosis> dx,
+    List<Medication> meds,
+  ) {
+    final self = e.source == RecordSource.self;
+    return RecordCard(
+      title: formatDay(e.date),
+      subtitle: [
+        e.location,
+        e.practitioner,
+        e.complaint,
+        if (dx.isNotEmpty) dx.map((d) => d.name).join(', '),
+      ].nonNulls.join(' · '),
+      source: e.source,
+      originName: e.originName,
+      leading: const Icon(Icons.medical_information_outlined),
+      onTap: () => showRecordSheet(
+        context,
+        title: self
+            ? 'Doktor ziyareti · ${formatDay(e.date)}'
+            : 'Muayene · ${formatDay(e.date)}',
+        source: e.source,
+        originName: e.originName,
+        details: [
+          InfoRow('Hastane / klinik', e.location),
+          InfoRow('Doktor', e.practitioner),
+          InfoRow(self ? 'Neden gittiniz' : 'Şikayet', e.complaint),
+          InfoRow('Bulgular', e.findings),
+          for (final d in dx)
+            InfoRow(
+              d.verification == 'provisional' ? 'Ön tanı' : 'Tanı',
+              [d.name, if (d.code != null) '(${d.code})'].join(' '),
+            ),
+          InfoRow('Doktorun önerileri', e.plan),
+          InfoRow(
+            'Yazılan ilaçlar',
+            meds.isEmpty ? null : meds.map((m) => m.name).join(', '),
+          ),
+          InfoRow('Notlarım', e.note),
+        ],
+        actions: [
+          if (self)
+            Builder(
+              builder: (sheet) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    openMedicationWizard(context, encounterId: e.id);
+                  },
+                  icon: const Icon(Icons.medication_outlined),
+                  label: const Text('Bu ziyarette yazılan ilacı ekle'),
+                ),
+              ),
+            ),
+        ],
+        onEdit: () => openForm(
+          context,
+          EncounterForm(edit: e, diagnosis: dx.firstOrNull),
+        ),
+        onDelete: () => _delete(context, ref, e, dx),
+      ),
+    );
+  }
+
+  /// Muayeneyi ve ona bağlı tanıları birlikte siler; "Geri al" ikisini de
+  /// geri getirir. Bağlı ilaçlar kullanılmaya devam edebileceği için kalır.
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    Encounter e,
+    List<Diagnosis> dx,
+  ) async {
+    final repo = ref.read(repositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    for (final d in dx) {
+      await repo.deleteRecord(repo.db.diagnoses, d.id);
+    }
+    await repo.deleteRecord(repo.db.encounters, e.id);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Kayıt silindi'),
+          action: SnackBarAction(
+            label: 'Geri al',
+            onPressed: () async {
+              await repo.restore(repo.db.encounters, e);
+              for (final d in dx) {
+                await repo.restore(repo.db.diagnoses, d);
+              }
+            },
+          ),
+        ),
+      );
+  }
+}
+
+/// Yeni doktor ziyareti ekler; kaydedilince bu ziyarette ilaç yazılıp
+/// yazılmadığını sorar.
+Future<void> addVisit(BuildContext context) async {
+  final saved = await Navigator.of(context).push<Encounter>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => const EncounterForm(),
+    ),
+  );
+  if (saved == null || !context.mounted) return;
+  final addMedication = await confirm(
+    context,
+    title: 'Bu ziyarette ilaç yazıldı mı?',
+    message:
+        'İlacı şimdi eklerseniz bu ziyaretle birlikte saklanır ve saatinde '
+        'hatırlatılır.',
+    action: 'İlaç ekle',
+    cancel: 'Hayır',
+    destructive: false,
+  );
+  if (addMedication && context.mounted) {
+    await openMedicationWizard(context, encounterId: saved.id);
+  }
+}
+
+class EncounterForm extends ConsumerStatefulWidget {
+  const EncounterForm({super.key, this.edit, this.diagnosis});
+
+  final Encounter? edit;
+
+  /// Ziyarete bağlı (kullanıcının girdiği) tanı.
+  final Diagnosis? diagnosis;
+
+  @override
+  ConsumerState<EncounterForm> createState() => _EncounterFormState();
+}
+
+class _EncounterFormState extends ConsumerState<EncounterForm> {
+  late final _location = TextEditingController(
+    text: widget.edit?.location ?? '',
+  );
+  late final _doctor = TextEditingController(
+    text: widget.edit?.practitioner ?? '',
+  );
+  late final _complaint = TextEditingController(
+    text: widget.edit?.complaint ?? '',
+  );
+  late final _diagnosis = TextEditingController(
+    text: widget.diagnosis?.name ?? '',
+  );
+  late final _plan = TextEditingController(text: widget.edit?.plan ?? '');
+  late final _note = TextEditingController(text: widget.edit?.note ?? '');
+  late DateTime? _date = widget.edit?.date ?? dateOnly(DateTime.now());
+  DateTime? _followUp;
+  Encounter? _saved;
+
+  bool get _isNew => widget.edit == null;
+
+  @override
+  void dispose() {
+    for (final c in [
+      _location,
+      _doctor,
+      _complaint,
+      _diagnosis,
+      _plan,
+      _note,
+    ]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final repo = ref.read(repositoryProvider);
+    final profileId = ref.read(currentProfileProvider)!.id;
+    final now = DateTime.now();
+    final base =
+        widget.edit ??
+        Encounter(
+          id: newId(),
+          profileId: profileId,
+          source: RecordSource.self,
+          createdAt: now,
+          date: _date!,
+        );
+    final encounter = base.copyWith(
+      date: _date,
+      location: Value(emptyToNull(_location.text)),
+      practitioner: Value(emptyToNull(_doctor.text)),
+      complaint: Value(emptyToNull(_complaint.text)),
+      plan: Value(emptyToNull(_plan.text)),
+      note: Value(emptyToNull(_note.text)),
+    );
+    await repo.save(repo.db.encounters, encounter);
+
+    final dxName = emptyToNull(_diagnosis.text);
+    final existing = widget.diagnosis;
+    if (dxName == null) {
+      if (existing != null) {
+        await repo.deleteRecord(repo.db.diagnoses, existing.id);
+      }
+    } else if (existing?.name != dxName || existing?.date != _date) {
+      final dx =
+          existing ??
+          Diagnosis(
+            id: newId(),
+            profileId: profileId,
+            source: RecordSource.self,
+            createdAt: now,
+            name: dxName,
+            verification: 'confirmed',
+          );
+      await repo.save(
+        repo.db.diagnoses,
+        dx.copyWith(
+          name: dxName,
+          encounterId: Value(encounter.id),
+          date: Value(_date),
+          // Ad değiştiyse eski kod artık geçerli değildir.
+          code: Value(existing?.name == dxName ? existing?.code : null),
+        ),
+      );
+    }
+
+    if (_followUp != null) {
+      await repo.save(
+        repo.db.appointments,
+        AppointmentsCompanion.insert(
+          profileId: profileId,
+          start: _followUp!,
+          title: const Value('Kontrol'),
+          practitioner: Value(encounter.practitioner),
+          location: Value(encounter.location),
+        ),
+      );
+      await rescheduleNotifications(ref);
+    }
+    _saved = encounter;
+  }
+
+  @override
+  Widget build(BuildContext context) => RecordFormScaffold(
+    title: _isNew ? 'Doktor ziyareti ekle' : 'Ziyareti düzenle',
+    canSave: _date != null,
+    onSave: _save,
+    result: () => _saved,
+    children: [
+      DateField(
+        label: 'Ziyaret tarihi *',
+        value: _date,
+        firstDate: DateTime(1950),
+        lastDate: DateTime.now(),
+        onChanged: (v) => setState(() => _date = v),
+      ),
+      formGap,
+      TextField(
+        controller: _location,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          labelText: 'Hastane / klinik',
+          hintText: 'Örn. Şehir Hastanesi',
+        ),
+      ),
+      formGap,
+      TextField(
+        controller: _doctor,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          labelText: 'Doktor / bölüm',
+          hintText: 'Örn. Dr. Elif Kaya, KBB',
+        ),
+      ),
+      formGap,
+      TextField(
+        controller: _complaint,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(
+          labelText: 'Neden gittiniz?',
+          hintText: 'Örn. Boğaz ağrısı, ateş',
+        ),
+      ),
+      formGap,
+      SuggestField(
+        controller: _diagnosis,
+        label: 'Doktorun söylediği tanı',
+        hint: 'Örn. Bademcik iltihabı',
+        suggestions: conditionSuggestions,
+      ),
+      formGap,
+      TextField(
+        controller: _plan,
+        textCapitalization: TextCapitalization.sentences,
+        maxLines: null,
+        decoration: const InputDecoration(
+          labelText: 'Doktorun önerileri',
+          hintText: 'Örn. Bol sıvı, 1 hafta sonra kontrol',
+        ),
+      ),
+      if (_isNew) ...[
+        formGap,
+        DateField(
+          label: 'Kontrol randevusu (varsa)',
+          value: _followUp,
+          withTime: true,
+          allowEmpty: true,
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 730)),
+          onChanged: (v) => setState(() => _followUp = v),
+        ),
+      ],
+      formGap,
+      TextField(
+        controller: _note,
+        textCapitalization: TextCapitalization.sentences,
+        maxLines: null,
+        decoration: const InputDecoration(labelText: 'Notlarım'),
+      ),
+    ],
+  );
 }

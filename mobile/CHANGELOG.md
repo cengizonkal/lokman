@@ -5,6 +5,7 @@
 - **Yeni logo:** mavi çerçeve içinde ters üçgen, mavi-beyaz tonlarda. Uygulama simgesi, bildirim simgesi ve karşılama ekranı yeni logoyu kullanır.
 - **Geçirilmiş hastalıklar:** "Kronik hastalıklar" bölümünün adı "Hastalıklar" oldu. Zatürre, sarılık gibi geçirdiğiniz hastalıkları da başlangıç ve iyileşme tarihiyle ekleyebilirsiniz; liste "Devam eden" ve "Geçirilmiş" olarak ayrılır. Sağlık dosyasında IPS'in geçirilmiş hastalıklar bölümüne, PDF özette ayrı tabloya yazılır.
 - Klinikten "iyileşti" olarak gelen hastalıklar artık devam eden hastalık gibi görünmez.
+- **Doktor ziyareti ekleme:** Muayeneler bölümüne gittiğiniz doktor ziyaretlerini kendiniz ekleyebilirsiniz: tarih, hastane, doktor/bölüm, neden gittiğiniz, doktorun söylediği tanı ve önerileri, kendi notunuz. Kaydettikten sonra o ziyarette yazılan ilacı ekleyebilirsiniz; ilaç ziyarete bağlanır ve saatinde hatırlatılır. Kontrol tarihi girerseniz randevu ve hatırlatma kendiliğinden oluşur. Bu kayıtlar sağlık dosyasında ve PDF özette "hasta beyanı" olarak yer alır.
 
 ## 0.1.1
 

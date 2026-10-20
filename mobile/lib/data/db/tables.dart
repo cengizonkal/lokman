@@ -71,14 +71,22 @@ class ProfileLinks extends Table {
   ];
 }
 
+/// Muayeneler: klinikten gelenler ve kullanıcının kendi girdiği doktor
+/// ziyaretleri.
 class Encounters extends Table with RecordColumns {
   DateTimeColumn get date => dateTime()();
   TextColumn get practitioner => text().nullable()();
+
+  /// Gidilen hastane / klinik (FHIR `Encounter.serviceProvider`).
+  TextColumn get location => text().nullable()();
   TextColumn get complaint => text().nullable()();
   TextColumn get findings => text().nullable()();
 
   /// Hekimin hastaya önerileri.
   TextColumn get plan => text().nullable()();
+
+  /// Kullanıcının kendi notu.
+  TextColumn get note => text().nullable()();
 }
 
 @DataClassName('Diagnosis')
@@ -110,6 +118,9 @@ class Medications extends Table with RecordColumns {
 
   /// Aynı reçetedeki kalemleri gruplar (`MedicationRequest.groupIdentifier`).
   TextColumn get prescriptionRef => text().nullable()();
+
+  /// İlacın yazıldığı muayene (`MedicationRequest.encounter`).
+  TextColumn get encounterId => text().nullable()();
   DateTimeColumn get stoppedAt => dateTime().nullable()();
 }
 

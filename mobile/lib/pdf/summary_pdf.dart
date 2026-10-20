@@ -294,8 +294,10 @@ Future<Uint8List> buildSummaryPdf(
               pw.Text(
                 [
                   _date.format(e.date),
-                  e.originName,
+                  e.location ?? e.originName,
                   e.practitioner,
+                  if (e.source == RecordSource.self)
+                    'Hasta beyanı / Patient reported',
                 ].nonNulls.join(' — '),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
@@ -324,6 +326,11 @@ Future<Uint8List> buildSummaryPdf(
               if (e.plan != null)
                 pw.Text(
                   'Öneriler / Recommendations: ${e.plan}',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              if (e.note != null)
+                pw.Text(
+                  'Hasta notu / Patient note: ${e.note}',
                   style: const pw.TextStyle(fontSize: 9),
                 ),
             ],

@@ -331,6 +331,12 @@ class _BundleReader {
         .map((p) => asString(asMap(p['individual'])?['display']))
         .nonNulls
         .firstOrNull;
+    final location =
+        asString(asMap(r['serviceProvider'])?['display']) ??
+        asMapList(r['location'])
+            .map((l) => asString(asMap(l['location'])?['display']))
+            .nonNulls
+            .firstOrNull;
     final complaint = asMapList(r['reasonCode'])
         .map(conceptText)
         .nonNulls
@@ -345,9 +351,11 @@ class _BundleReader {
           originRef: Value(c.originRef),
           date: date,
           practitioner: Value(practitioner),
+          location: Value(location),
           complaint: Value(complaint.nullIfEmpty),
           findings: Value(ext(LokmanFhir.encounterFindings)),
           plan: Value(ext(LokmanFhir.encounterPlan)),
+          note: Value(ext(LokmanFhir.encounterNote)),
         );
       }),
     ];
@@ -487,6 +495,9 @@ class _BundleReader {
           atcCode: Value(atc),
           prescriptionRef: Value(
             asString(asMap(r['groupIdentifier'])?['value']),
+          ),
+          encounterId: Value(
+            c.resolve(asString(asMap(r['encounter'])?['reference'])),
           ),
           stoppedAt: Value(stopped ? stoppedAt : null),
         );
