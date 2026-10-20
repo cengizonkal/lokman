@@ -175,7 +175,10 @@ Kurulumda seçilen `clinic.country` (`TR` ya da `KKTC`) aşağıdaki varsayılan
 - Yerel veritabanı: SQLite (`drift`); her kaynağın ham FHIR JSON'u da saklanır
 - Terminoloji: ICD-11 MMS uygulamanın varlıklarında gömülü (`mobile/assets/terminology/`, `terminology/build.py` üretir); ağ erişimi yok
 - Bildirimler: `flutter_local_notifications` + `timezone`; yeniden başlatmada yeniden kurulum; Android 13+ bildirim ve 12+ tam zamanlı alarm izinleri
-- QR: `mobile_scanner`; yalnızca `https://` bağlantıları kabul edilir
+- QR: `flutter_zxing` (zxing-cpp, Apache-2.0) + `camera`; yalnızca `https://`
+  bağlantıları kabul edilir. Google ML Kit kullanan `mobile_scanner`'dan,
+  uygulamanın tamamen özgür yazılım kalması ve F-Droid gibi depolarda
+  yayınlanabilmesi için geçildi
 - Dosya: Android paylaş menüsü / dosya seçici; PDF: `pdf` paketi
 - `riverpod` (durum), `go_router` (yönlendirme), `fl_chart` (grafik)
 

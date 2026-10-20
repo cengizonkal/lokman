@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
 import 'package:http/http.dart' as http;
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Klinikten alınan QR kodu okur ve sağlık dosyasını indirir. Başarılı
 /// olursa dosya metnini döndürür.
@@ -14,25 +14,15 @@ class QrScanScreen extends StatefulWidget {
 }
 
 class _QrScanScreenState extends State<QrScanScreen> {
-  final _controller = MobileScannerController(
-    formats: const [BarcodeFormat.qrCode],
-  );
+  /// Dosya indirilirken kamera söküldüğü için okuma da durur.
   bool _busy = false;
   String? _error;
+  bool _cameraFailed = false;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _onDetect(BarcodeCapture capture) async {
+  Future<void> _onScan(Code code) async {
     if (_busy) return;
-    final raw = capture.barcodes
-        .map((b) => b.rawValue)
-        .whereType<String>()
-        .firstOrNull;
-    if (raw == null) return;
+    final raw = code.text;
+    if (raw == null || raw.isEmpty) return;
     final uri = Uri.tryParse(raw.trim());
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       setState(
@@ -46,7 +36,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
       _busy = true;
       _error = null;
     });
-    await _controller.stop();
     try {
       final res = await http
           .get(uri, headers: {'Accept': 'application/fhir+json'})
@@ -69,13 +58,20 @@ class _QrScanScreenState extends State<QrScanScreen> {
     }
   }
 
-  Future<void> _fail(String message) async {
+  void _fail(String message) {
     if (!mounted) return;
     setState(() {
       _busy = false;
       _error = message;
     });
-    await _controller.start();
+  }
+
+  /// Kamera hiç açılamazsa (izin yok, cihazda kamera yok) tarayıcı yerine
+  /// açıklama gösterilir; kullanıcı dosya ile aktarmaya yönlendirilir.
+  void _onControllerCreated(CameraController? controller, Exception? error) {
+    final failed = error != null;
+    if (failed == _cameraFailed || !mounted) return;
+    setState(() => _cameraFailed = failed);
   }
 
   @override
@@ -86,39 +82,34 @@ class _QrScanScreenState extends State<QrScanScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                MobileScanner(
-                  controller: _controller,
-                  onDetect: _onDetect,
-                  errorBuilder: (context, error) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
+            child: ColoredBox(
+              color: Colors.black,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (!_busy)
+                    ReaderWidget(
+                      onScan: _onScan,
+                      onControllerCreated: _onControllerCreated,
+                      codeFormat: Format.qrCode,
+                      tryInverted: true,
+                      cropPercent: 0.6,
+                      showGallery: false,
+                      showToggleCamera: false,
+                      scanDelay: const Duration(milliseconds: 300),
+                    ),
+                  if (_cameraFailed)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
                       child: Text(
-                        error.errorCode ==
-                                MobileScannerErrorCode.permissionDenied
-                            ? 'Kamera izni verilmedi. Ayarlardan Lokman için '
-                                  'kamera iznini açın ya da dosya ile aktarın.'
-                            : 'Kamera açılamadı.',
+                        'Kamera açılamadı. Ayarlardan Lokman için kamera '
+                        'iznini açın ya da dosya ile aktarın.',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                  ),
-                ),
-                Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 3),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                if (_busy)
-                  const ColoredBox(
-                    color: Colors.black54,
-                    child: Center(
+                  if (_busy)
+                    const Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -131,8 +122,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
                         ],
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           Container(
