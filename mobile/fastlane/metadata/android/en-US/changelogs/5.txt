@@ -1,0 +1,3 @@
+• QR scanning now uses the free software zxing library instead of Google ML Kit. Reading a clinic's QR code works exactly as before and still accepts https links only; the app no longer depends on any Google component.
+• Gender in the profile form is female/male only, because the medical information the app shows is based on those two.
+• First release published on F-Droid.

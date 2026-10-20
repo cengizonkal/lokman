@@ -4,7 +4,7 @@ publish_to: 'none'
 
 # Sürüm adı + derleme numarası. Release iş akışı `v<sürüm adı>` etiketi
 # yoksa yeni bir GitHub sürümü yayınlar; her yayında derleme numarasını artırın.
-version: 0.1.3+4
+version: 0.1.4+5
 
 environment:
   sdk: ^3.13.5

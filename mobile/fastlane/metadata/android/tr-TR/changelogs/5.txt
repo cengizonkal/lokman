@@ -1,0 +1,3 @@
+• QR okuyucu Google ML Kit yerine özgür yazılım zxing kullanıyor. Klinikten QR ile kayıt alma aynı şekilde çalışıyor, yine yalnızca https bağlantıları kabul ediliyor; uygulama artık hiçbir Google bileşenine bağlı değil.
+• Profilde cinsiyet yalnızca kadın/erkek. Uygulamanın gösterdiği tıbbi bilgiler bu ikisine göre hazırlandığı için "Diğer" seçeneği kaldırıldı.
+• F-Droid'de yayınlanan ilk sürüm.

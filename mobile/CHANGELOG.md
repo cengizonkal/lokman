@@ -1,5 +1,11 @@
 # Değişiklikler
 
+## 0.1.4
+
+- **QR okuyucu değişti.** Klinikten QR ile kayıt alma artık Google'ın ML Kit bileşeni yerine özgür yazılım zxing ile çalışıyor. Sizin için değişen bir şey yok — okutma aynı, yine yalnızca `https://` bağlantıları kabul ediliyor — ama uygulama artık hiçbir Google bileşenine bağlı değil.
+- **Profilde cinsiyet yalnızca kadın/erkek.** Uygulamanın gösterdiği tıbbi bilgiler bu ikisine göre hazırlandığı için "Diğer" seçeneği kaldırıldı. Daha önce seçtiyseniz alan boşalır, dilediğiniz zaman yeniden seçebilirsiniz. Klinikten gelen dosyada başka bir değer varsa okunur ama kaydedilmez.
+- **F-Droid'e gönderildi.** Uygulama, özgür yazılım deposu F-Droid'in listesine eklenmek üzere gönderildi. F-Droid uygulamayı kaynak kodundan kendi sunucusunda derler ve **kendi anahtarıyla** imzalar: listeye girdiğinde oradaki sürüm ile buradaki sürüm birbirinin üstüne kurulamaz. Kanal değiştirmek isterseniz önce **Paylaş → Paylaş / yedekle** ile yedek alın, uygulamayı kaldırın, yeniden kurup yedeği içe aktarın.
+
 ## 0.1.3
 
 - **Hastalık ve tanı adları artık uluslararası standart kodla kaydediliyor.** Hastalık ya da tanı yazarken uygulama, içinde gömülü gelen **ICD-11** listesinde arama yapar (17.231 hastalık, resmî Türkçe adlarıyla). Günlük dille yazmanız yeter: "yüksek tansiyon" yazınca *Esansiyel Hipertansiyon*, "zatürre" yazınca *Pnömoni*, "şeker hastalığı" yazınca *Tip 2 diabetes mellitus* önerilir. Listeden seçerseniz hastalığın kodu da kaydedilir ve alanın altında görünür ("ICD-11 BA00").
