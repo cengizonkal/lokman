@@ -62,6 +62,7 @@ Etiket yoksa kayıt, paketi üreten kurumun (Organization) kaydı sayılır. Kli
 
 | FHIR | Mobil tablo | Okunan / yazılan alanlar |
 |---|---|---|
+| `Patient` | `profiles` | `name.given` / `name.family` (yoksa `name.text`), `birthDate`, `gender` (yalnızca `female` ve `male` saklanır; `other` / `unknown` boş bırakılır), `identifier` (§2) |
 | `Encounter` | `encounters` | `period.start`, `participant[0].individual.display`, `serviceProvider.display` (gidilen hastane/klinik; okurken `location[0].location.display` de kabul edilir), `reasonCode[].text`, eklentiler: `encounter-findings`, `encounter-plan`, `encounter-note` (hastanın kendi notu) (`valueString`). Kullanıcının girdiği doktor ziyaretleri `meta.tag` = `patient-reported` taşır |
 | `Condition` + `encounter-diagnosis` | `diagnoses` | `code` (aşağıya bakın), `verificationStatus` (`provisional` / `confirmed`), `encounter`, `recordedDate` |
 | `Condition` (diğer) | `conditions` | `code` (aşağıya bakın), `onsetDateTime`, `abatementDateTime`, `clinicalStatus`, `note` |

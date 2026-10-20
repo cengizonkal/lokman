@@ -167,6 +167,51 @@ void main() {
     expect(diagnosis.code, 'J02.9');
     expect(diagnosis.codeSystem, 'http://hl7.org/fhir/sid/icd-10');
   });
+
+  test('sürüm 4 veritabanında kadın/erkek dışı cinsiyet boşaltılır', () async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    final dir = await Directory.systemTemp.createTemp('lokman_migration');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}/lokman.sqlite');
+
+    final v4 = AppDatabase(NativeDatabase(file));
+    // Sürüm 4'te cinsiyet olarak 'other' da saklanabiliyordu.
+    await v4
+        .into(v4.profiles)
+        .insert(
+          ProfilesCompanion.insert(
+            id: const Value('p3'),
+            firstName: 'Deniz',
+            gender: const Value('other'),
+          ),
+        );
+    await v4.close();
+    final raw = NativeDatabase(
+      file,
+      setup: (db) {
+        db.execute(
+          'INSERT INTO profiles (id, first_name, last_name, gender) VALUES '
+          "('p1', 'Ayşe', '', 'female'),"
+          "('p2', 'Ali', '', 'male'),"
+          "('p4', 'Can', '', NULL)",
+        );
+        db.userVersion = 4;
+      },
+    );
+    await raw.ensureOpen(_NoMigration(4));
+    await raw.close();
+
+    final db = AppDatabase(NativeDatabase(file));
+    addTearDown(db.close);
+    final profiles = {
+      for (final p in await db.select(db.profiles).get()) p.id: p,
+    };
+    expect(profiles, hasLength(4));
+    expect(profiles['p1']!.gender, 'female');
+    expect(profiles['p2']!.gender, 'male');
+    expect(profiles['p3']!.gender, isNull);
+    expect(profiles['p4']!.gender, isNull);
+  });
 }
 
 class _NoMigration extends QueryExecutorUser {

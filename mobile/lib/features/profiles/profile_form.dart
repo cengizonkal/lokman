@@ -18,7 +18,7 @@ class ProfileFormData {
     firstName: p.firstName,
     lastName: p.lastName,
     birthDate: p.birthDate,
-    gender: p.gender,
+    gender: genders.contains(p.gender) ? p.gender : null,
     bloodType: p.bloodType,
   );
 
@@ -46,6 +46,9 @@ class ProfileFormData {
     bloodType: Value(bloodType),
   );
 }
+
+/// Kaydedilen cinsiyet değerleri (FHIR `Patient.gender` ile aynı).
+const genders = ['female', 'male'];
 
 const bloodTypes = [
   '0 Rh+',
@@ -127,7 +130,6 @@ class _ProfileFieldsState extends State<ProfileFields> {
           segments: const [
             ButtonSegment(value: 'female', label: Text('Kadın')),
             ButtonSegment(value: 'male', label: Text('Erkek')),
-            ButtonSegment(value: 'other', label: Text('Diğer')),
           ],
           selected: {if (d.gender != null) d.gender},
           onSelectionChanged: (s) =>

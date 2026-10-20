@@ -222,7 +222,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   final String lastName;
   final DateTime? birthDate;
 
-  /// `female`, `male`, `other` ya da boş.
+  /// `female`, `male` ya da boş.
   final String? gender;
   final String? bloodType;
   final int colorIndex;

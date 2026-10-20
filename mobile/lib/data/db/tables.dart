@@ -43,7 +43,7 @@ class Profiles extends Table {
   TextColumn get lastName => text().withDefault(const Constant(''))();
   DateTimeColumn get birthDate => dateTime().nullable()();
 
-  /// `female`, `male`, `other` ya da boş.
+  /// `female`, `male` ya da boş.
   TextColumn get gender => text().nullable()();
   TextColumn get bloodType => text().nullable()();
   IntColumn get colorIndex => integer().withDefault(const Constant(0))();

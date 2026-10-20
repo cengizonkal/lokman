@@ -301,7 +301,6 @@ class _BundleReader {
       gender: switch (r['gender']) {
         'female' => 'female',
         'male' => 'male',
-        'other' => 'other',
         _ => null,
       },
       identifiers: [

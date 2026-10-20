@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'lokman'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -67,6 +67,14 @@ class AppDatabase extends _$AppDatabase {
             "AND code GLOB '[0-9A-Z][A-Z][0-9A-Z][0-9A-Z]*'",
           );
         }
+      }
+      if (from < 5) {
+        // Cinsiyet yalnızca kadın/erkek olarak saklanıyor: eski kayıtlardaki
+        // diğer değerler boşaltılır.
+        await customStatement(
+          'UPDATE profiles SET gender = NULL '
+          "WHERE gender IS NOT NULL AND gender NOT IN ('female', 'male')",
+        );
       }
     },
     beforeOpen: (details) async {

@@ -142,7 +142,7 @@ Yalnızca ekleme yapılır. Bir veritabanı tetikleyicisi `UPDATE` ve `DELETE` i
 | first_name | varchar(100) | not null |
 | last_name | varchar(100) | not null |
 | birth_date | date | null olabilir |
-| gender | varchar(10) | CHECK in (`female`, `male`, `other`, `unknown`), default `unknown` (FHIR ile aynı değerler) |
+| gender | varchar(10) | CHECK in (`female`, `male`, `unknown`), default `unknown` (FHIR değerleri; tıbbi karar desteği ikili cinsiyete bağlı olduğu için `other` kullanılmaz) |
 | blood_type | varchar(3) | CHECK in (`A+`,`A-`,`B+`,`B-`,`AB+`,`AB-`,`0+`,`0-`) |
 | phone | varchar(30) | |
 | email | varchar(255) | |

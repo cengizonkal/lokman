@@ -125,8 +125,7 @@ Future<Uint8List> buildSummaryPdf(
         if (p.gender != null)
           'Cinsiyet / Sex: ${switch (p.gender) {
             'female' => 'Kadın / Female',
-            'male' => 'Erkek / Male',
-            _ => 'Diğer / Other',
+            _ => 'Erkek / Male',
           }}',
         if (p.bloodType != null) 'Kan grubu / Blood type: ${p.bloodType}',
       ].join('   '),
